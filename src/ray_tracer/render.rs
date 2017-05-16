@@ -1,56 +1,24 @@
-use ray_tracer::vecmath::Vector3;
-use ray_tracer::RayTraceColor;
+use ray_tracer::{RayTraceCamera, RayTraceColor, RayTraceRay, RayTraceSink, RayTraceSource};
+use ray_tracer::rand::{Rng, thread_rng};
 
-pub trait RayTraceSink {
-	fn init(&self, width: usize, height: usize, frames: usize);
-	fn start_frame(&self, frame: usize);
-	fn set_sample(&self, x: usize, y: usize, color: &RayTraceColor);
-	fn finish_frame(&self, frame: usize);
-}
+use std::f64;
 
-pub trait RayTraceCamera {
-	fn make_ray(&self, x: f64, y: f64, frame: usize) -> RayTraceRay;
-}
-
-pub struct RayTraceSource<Camera: RayTraceCamera> {
-	width: usize,
-	height: usize,
-	frames: usize,
-	scene: RayTraceScene,
-	camera: Camera,
-	params: RayTraceParams
-}
-
-pub struct RayTraceParams {
-	ray_jitter: Option<RayTraceJitter>
-}
-
-pub struct RayTraceJitter {
-	size: f64,
-	ray_count: usize
-}
-
-pub struct RayTraceScene {
-}
-
-struct RayTraceRay {
-	position: Vector3<f64>,
-	direction: Vector3<f64>
-}
-
-pub struct RayTracer {
-}
+pub struct RayTracer { }
 
 impl RayTracer {
-	pub fn render<Sink: RayTraceSink, Camera: RayTraceCamera>(source: &RayTraceSource<Camera>, sink: &Sink) {
-		sink.init(source.width, source.height, source.frames);
+	pub fn new() -> RayTracer {
+		RayTracer { }
+	}
+	
+	pub fn render<Sink: RayTraceSink, Camera: RayTraceCamera>(&mut self, source: &RayTraceSource<Camera>, sink: &mut Sink) {
+		sink.init(source.get_width(), source.get_height(), source.get_frames());
 		
-		for frame in 0..source.frames {
+		for frame in 0..source.get_frames() {
 			sink.start_frame(frame);
 			
-			for y in 0..source.height {
-				for x in 0..source.width {
-					let color = compute_color(source, x, y, frame);
+			for y in 0..source.get_height() {
+				for x in 0..source.get_width() {
+					let color = self.compute_color(source, x, y, frame);
 					sink.set_sample(x, y, &color);
 				}
 			}
@@ -58,29 +26,41 @@ impl RayTracer {
 			sink.finish_frame(frame);
 		}
 	}
-}
-
-fn compute_color<Camera: RayTraceCamera>(source: &RayTraceSource<Camera>, x: usize, y: usize, frame: usize) -> RayTraceColor {
-	match &source.params.ray_jitter {
-		&None => {
-			let ray = source.camera.make_ray(x as f64, y as f64, frame);
-			return compute_color_for_ray(&ray, source);
-		},
-		&Some(ref jitter) => {
-			let color = RayTraceColor::new();
-			
-			for _ in 0..jitter.ray_count {
-				let jx = 0.0;
-				let jy = 0.0;
-				let ray = source.camera.make_ray(jx, jy, frame);
-				compute_color_for_ray(&ray, source);
+	
+	fn compute_color<Camera: RayTraceCamera>(&mut self, source: &RayTraceSource<Camera>, x: usize, y: usize, frame: usize) -> RayTraceColor {
+		let params = source.get_params();
+		let camera = source.get_camera();
+		
+		match params.get_jitter() {
+			&None => {
+				let ray = camera.make_ray(x as f64, y as f64, frame);
+				return self.compute_color_for_ray(&ray, source);
+			},
+			&Some(ref jitter) => {
+				let ray_count = jitter.get_ray_count();
+				let jitter_size = jitter.get_size();
+				let mut rng = thread_rng();
+				
+				
+				let mut color = RayTraceColor::new();
+				let color_factor = 1.0_f32 / (ray_count as f32);
+				
+				for _ in 0..ray_count {
+					let jx = x as f64 + rng.next_f64() / f64::MAX * jitter_size;
+					let jy = y as f64 + rng.next_f64() / f64::MAX * jitter_size;
+					
+					let ray = camera.make_ray(jx, jy, frame);
+					let ray_color = self.compute_color_for_ray(&ray, source);
+					
+					color += ray_color * color_factor;
+				}
+				
+				return color;
 			}
-			
-			return color;
 		}
 	}
-}
-
-fn compute_color_for_ray<Camera: RayTraceCamera>(ray: &RayTraceRay, source: &RayTraceSource<Camera>) -> RayTraceColor {
-	RayTraceColor::new()
+	
+	fn compute_color_for_ray<Camera: RayTraceCamera>(&mut self, ray: &RayTraceRay, source: &RayTraceSource<Camera>) -> RayTraceColor {
+		RayTraceColor::new_with(0.0, 0.0, 1.0, 1.0)
+	}
 }

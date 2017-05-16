@@ -1,12 +1,13 @@
 extern crate vecmath;
-
-use self::vecmath::*;
+extern crate png;
+extern crate rand;
 
 mod color;
 mod basic;
 
 pub mod render;
-pub mod png_sink;
+pub mod sink;
+pub mod camera;
 
 pub use self::color::*;
 pub use self::basic::*;
