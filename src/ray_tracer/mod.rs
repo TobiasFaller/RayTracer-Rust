@@ -1,5 +1,4 @@
 extern crate vecmath;
-extern crate png;
 extern crate rand;
 
 mod color;
