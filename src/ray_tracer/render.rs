@@ -6,6 +6,7 @@ use std::io::Error as IOError;
 
 pub struct RayTracer { }
 
+#[allow(unused_variables)]
 impl RayTracer {
 	pub fn new() -> RayTracer {
 		RayTracer { }
@@ -50,8 +51,8 @@ impl RayTracer {
 				let color_factor = 1.0_f32 / (ray_count as f32);
 				
 				for _ in 0..ray_count {
-					let jx = x as f64 + rng.next_f64() / f64::MAX * jitter_size;
-					let jy = y as f64 + rng.next_f64() / f64::MAX * jitter_size;
+					let jx = x as f64 + ((rng.next_f64() / f64::MAX) * 2.0 - 1.0) * jitter_size;
+					let jy = y as f64 + ((rng.next_f64() / f64::MAX) * 2.0 - 1.0) * jitter_size;
 
 					let ray = camera.make_ray(jx, jy);
 					let ray_color = self.compute_color_for_ray(&ray, scene, params);
@@ -65,6 +66,6 @@ impl RayTracer {
 	}
 
 	fn compute_color_for_ray(&mut self, ray: &RayTraceRay, scene: &RayTraceScene, params: &RayTraceParams) -> RayTraceColor {
-		RayTraceColor::new_with(0.0, 0.0, 1.0, 0.5)
+		RayTraceColor::new_with(ray.get_position()[0] as f32, ray.get_position()[1] as f32, 0.0, 1.0)
 	}
 }

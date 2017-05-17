@@ -2,6 +2,7 @@
 
 use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div, DivAssign};
 
+#[derive(Copy)]
 pub struct RayTraceColor {
 	r: f32,
 	g: f32,
@@ -83,6 +84,17 @@ impl RayTraceColor {
 		self.g -= g;
 		self.b -= b;
 		self.a -= a;
+	}
+}
+
+impl Clone for RayTraceColor {
+	fn clone(&self) -> RayTraceColor {
+		RayTraceColor {
+			r: self.r,
+			g: self.g,
+			b: self.b,
+			a: self.a
+		}
 	}
 }
 

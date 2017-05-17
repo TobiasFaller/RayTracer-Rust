@@ -1,7 +1,7 @@
-use ray_tracer::vecmath::Vector3;
-use ray_tracer::RayTraceColor;
+use ray_tracer::{RayTraceColor, RayTraceRay, RayTraceObject};
 
 use std::io::Error as IOError;
+use std::vec::Vec;
 
 pub trait RayTraceSink {
 	fn init(&mut self, width: usize, height: usize, frames: usize) -> Result<(), IOError>;
@@ -15,15 +15,17 @@ pub trait RayTraceCamera {
 	fn make_ray(&self, x: f64, y: f64) -> RayTraceRay;
 }
 
-pub struct RayTraceSource<Camera: RayTraceCamera> {
-	scene: RayTraceScene,
-	camera: Camera,
-	out_params: RayTraceOutputParams,
-	params: RayTraceParams
+#[allow(dead_code)]
+pub struct RayTraceSource<'a, Camera: 'a> where Camera: RayTraceCamera {
+	scene: &'a mut RayTraceScene,
+	camera: &'a mut Camera,
+	out_params: &'a RayTraceOutputParams,
+	params: &'a RayTraceParams
 }
 
-impl<Camera: RayTraceCamera> RayTraceSource<Camera> {
-	pub fn new(scene: RayTraceScene, camera: Camera, out_params: RayTraceOutputParams, params: RayTraceParams) -> RayTraceSource<Camera> {
+#[allow(dead_code)]
+impl<'a, Camera: 'a> RayTraceSource<'a, Camera> where Camera: RayTraceCamera {
+	pub fn new(scene: &'a mut RayTraceScene, camera: &'a mut Camera, out_params: &'a RayTraceOutputParams, params: &'a RayTraceParams) -> RayTraceSource<'a, Camera> {
 		RayTraceSource {
 			scene: scene,
 			camera: camera,
@@ -33,10 +35,10 @@ impl<Camera: RayTraceCamera> RayTraceSource<Camera> {
 	}
 	
 	pub fn get(&mut self) -> (&mut RayTraceScene, &mut Camera, &RayTraceParams, &RayTraceOutputParams) {
-		(&mut self.scene, &mut self.camera, &self.params, &self.out_params)
+		(self.scene, self.camera, self.params, self.out_params)
 	}
 	
-	pub fn get_mut_scene(&mut self) -> &RayTraceScene {
+	pub fn get_mut_scene(&mut self) -> &mut RayTraceScene {
 		&mut self.scene
 	}
 	
@@ -44,21 +46,23 @@ impl<Camera: RayTraceCamera> RayTraceSource<Camera> {
 		&mut self.camera
 	}
 	
-	pub fn get_mut_out_params(&mut self) -> &mut RayTraceOutputParams {
-		&mut self.out_params
+	pub fn get_mut_out_params(&mut self) -> &RayTraceOutputParams {
+		&self.out_params
 	}
 	
-	pub fn get_mut_params(&mut self) -> &mut RayTraceParams {
-		&mut self.params
+	pub fn get_mut_params(&mut self) -> &RayTraceParams {
+		&self.params
 	}
 }
 
+#[allow(dead_code)]
 pub struct RayTraceOutputParams {
 	width: usize,
 	height: usize,
 	frames: usize
 }
 
+#[allow(dead_code)]
 impl RayTraceOutputParams {
 	pub fn new(width: usize, height: usize, frames: usize) -> RayTraceOutputParams {
 		RayTraceOutputParams {
@@ -81,10 +85,12 @@ impl RayTraceOutputParams {
 	}
 }
 
+#[allow(dead_code)]
 pub struct RayTraceParams {
 	ray_jitter: Option<RayTraceJitter>
 }
 
+#[allow(dead_code)]
 impl RayTraceParams {
 	pub fn new() -> RayTraceParams {
 		RayTraceParams {
@@ -101,11 +107,13 @@ impl RayTraceParams {
 	}
 }
 
+#[allow(dead_code)]
 pub struct RayTraceJitter {
 	size: f64,
 	ray_count: usize
 }
 
+#[allow(dead_code)]
 impl RayTraceJitter {
 	pub fn new() -> RayTraceJitter {
 		RayTraceJitter {
@@ -130,35 +138,22 @@ impl RayTraceJitter {
 	}
 }
 
+#[allow(dead_code)]
 pub struct RayTraceScene {
+	objects: Vec<Box<RayTraceObject>>
 }
 
+#[allow(dead_code, unused_variables)]
 impl RayTraceScene {
 	pub fn new() -> RayTraceScene {
-		RayTraceScene { }
-	}
-
-	pub fn init(&mut self, frame: usize) { }
-}
-
-pub struct RayTraceRay {
-	position: Vector3<f64>,
-	direction: Vector3<f64>
-}
-
-impl RayTraceRay {
-	pub fn new(position: Vector3<f64>, direction: Vector3<f64>) -> RayTraceRay {
-		RayTraceRay {
-			position: position,
-			direction: direction
+		RayTraceScene {
+			objects: Vec::new()
 		}
 	}
 
-	pub fn get_position(&self) -> &Vector3<f64> {
-		&self.position
-	}
-
-	pub fn get_direction(&self) -> &Vector3<f64> {
-		&self.direction
+	pub fn init(&mut self, frame: usize) {
+		for obj in self.objects.iter_mut() {
+			obj.init(frame);
+		}
 	}
 }
