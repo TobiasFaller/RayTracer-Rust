@@ -1,7 +1,7 @@
-use ray_tracer::vecmath::Vector3;
+use vecmath::Vector3;
 
-use ray_tracer::{RayTraceObject, RayTraceRay, RayTraceRayHit};
-use ray_tracer::anim::RayTraceAnimPosition;
+use {RayTraceObject, RayTraceRay, RayTraceRayHit};
+use anim::RayTraceAnimPosition;
 
 struct RayTraceObjectSphere {
 	position: Vector3<f64>,

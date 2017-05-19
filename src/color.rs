@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div, DivAssign};
 
 #[derive(Copy)]
@@ -10,6 +8,7 @@ pub struct RayTraceColor {
 	a: f32
 }
 
+#[allow(dead_code)]
 impl RayTraceColor {
 	pub fn new() -> Self {
 		RayTraceColor {
@@ -26,6 +25,33 @@ impl RayTraceColor {
 			g: g,
 			b: b,
 			a: a
+		}
+	}
+	
+	pub fn transparent() -> Self {
+		RayTraceColor {
+			r: 1.0,
+			g: 1.0,
+			b: 1.0,
+			a: 0.0
+		}
+	}
+	
+	pub fn white() -> Self {
+		RayTraceColor {
+			r: 1.0,
+			g: 1.0,
+			b: 1.0,
+			a: 1.0
+		}
+	}
+	
+	pub fn black() -> Self {
+		RayTraceColor {
+			r: 0.0,
+			g: 0.0,
+			b: 0.0,
+			a: 1.0
 		}
 	}
 	

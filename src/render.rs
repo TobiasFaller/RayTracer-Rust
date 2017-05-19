@@ -1,15 +1,17 @@
-use ray_tracer::{RayTraceCamera, RayTraceColor, RayTraceRay, RayTraceSink, RayTraceSource, RayTraceScene, RayTraceParams};
-use ray_tracer::rand::{Rng, thread_rng};
-
 use std::f64;
 use std::io::Error as IOError;
+
+use rand::{Rng, thread_rng};
+
+use {RayTraceColor, RayTraceRay, RayTraceSink, RayTraceSource, RayTraceScene, RayTraceParams, RayTraceRayHit};
+use camera::RayTraceCamera;
 
 pub struct RayTracer { }
 
 #[allow(unused_variables)]
 impl RayTracer {
-	pub fn new() -> RayTracer {
-		RayTracer { }
+	pub fn new() -> Self {
+		Self { }
 	}
 
 	pub fn render<Sink: RayTraceSink, Camera: RayTraceCamera>(&mut self, source: &mut RayTraceSource<Camera>, sink: &mut Sink) -> Result<(), IOError> {
@@ -40,7 +42,7 @@ impl RayTracer {
 		match params.get_jitter() {
 			&None => {
 				let ray = camera.make_ray(x as f64, y as f64);
-				return self.compute_color_for_ray(&ray, scene, params);
+				return self.compute_color_for_ray(&ray, scene, params, 0);
 			},
 			&Some(ref jitter) => {
 				let ray_count = jitter.get_ray_count();
@@ -55,7 +57,7 @@ impl RayTracer {
 					let jy = y as f64 + ((rng.next_f64() / f64::MAX) * 2.0 - 1.0) * jitter_size;
 
 					let ray = camera.make_ray(jx, jy);
-					let ray_color = self.compute_color_for_ray(&ray, scene, params);
+					let ray_color = self.compute_color_for_ray(&ray, scene, params, 0);
 
 					color += ray_color * color_factor;
 				}
@@ -65,7 +67,32 @@ impl RayTracer {
 		}
 	}
 
-	fn compute_color_for_ray(&mut self, ray: &RayTraceRay, scene: &RayTraceScene, params: &RayTraceParams) -> RayTraceColor {
+	fn compute_color_for_ray(&mut self, ray: &RayTraceRay, scene: &RayTraceScene, params: &RayTraceParams, depth: usize) -> RayTraceColor {
+		// If this is an indirect ray we cancel after a maximum depth
+		if depth > params.get_max_depth() {
+			return params.get_indirect_color().clone();
+		}
+		
+		// Collect all ray hits
+		let mut ray_hits = Vec::<RayTraceRayHit>::new();
+		
+		for object in scene.get_objects().iter() {
+			if let Some(aabb) = object.get_aabb() {
+				if !aabb.is_hit(ray) {
+					continue;
+				}
+				
+				if let Some(hit) = object.next_hit(ray) {
+					ray_hits.push(hit);
+				}
+			}
+		}
+
+		// Return background color on no hit
+		if ray_hits.is_empty() {
+			return params.get_background_color().clone();
+		}
+
 		RayTraceColor::new_with(ray.get_direction()[0] as f32, ray.get_direction()[1] as f32, ray.get_direction()[2] as f32, 1.0)
 	}
 }

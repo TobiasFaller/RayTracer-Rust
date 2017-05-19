@@ -1,18 +1,14 @@
-use ray_tracer::{RayTraceColor, RayTraceRay, RayTraceObject};
-
 use std::io::Error as IOError;
 use std::vec::Vec;
+
+use {RayTraceColor, RayTraceObject};
+use camera::RayTraceCamera;
 
 pub trait RayTraceSink {
 	fn init(&mut self, width: usize, height: usize, frames: usize) -> Result<(), IOError>;
 	fn start_frame(&mut self, frame: usize) -> Result<(), IOError>;
 	fn set_sample(&mut self, x: usize, y: usize, color: &RayTraceColor) -> Result<(), IOError>;
 	fn finish_frame(&mut self, frame: usize) -> Result<(), IOError>;
-}
-
-pub trait RayTraceCamera {
-	fn init(&mut self, frame: usize);
-	fn make_ray(&self, x: f64, y: f64) -> RayTraceRay;
 }
 
 #[allow(dead_code)]
@@ -87,14 +83,20 @@ impl RayTraceOutputParams {
 
 #[allow(dead_code)]
 pub struct RayTraceParams {
-	ray_jitter: Option<RayTraceJitter>
+	ray_jitter: Option<RayTraceJitter>,
+	max_depth: usize,
+	background_color: RayTraceColor,
+	indirect_color: RayTraceColor
 }
 
 #[allow(dead_code)]
 impl RayTraceParams {
 	pub fn new() -> RayTraceParams {
 		RayTraceParams {
-			ray_jitter: None
+			ray_jitter: None,
+			max_depth: 3,
+			background_color: RayTraceColor::transparent(),
+			indirect_color: RayTraceColor::white()
 		}
 	}
 
@@ -104,6 +106,30 @@ impl RayTraceParams {
 	
 	pub fn get_jitter(&self) -> &Option<RayTraceJitter> {
 		&self.ray_jitter
+	}
+	
+	pub fn set_max_depth(&mut self, max_depth: usize) {
+		self.max_depth = max_depth;
+	}
+	
+	pub fn get_max_depth(&self) -> usize {
+		self.max_depth
+	}
+	
+	pub fn set_background_color(&mut self, color: RayTraceColor) {
+		self.background_color = color;
+	}
+	
+	pub fn get_background_color(&self) -> &RayTraceColor {
+		&self.background_color
+	}
+	
+	pub fn set_indirect_color(&mut self, color: RayTraceColor) {
+		self.indirect_color = color;
+	}
+	
+	pub fn get_indirect_color(&self) -> &RayTraceColor {
+		&self.indirect_color
 	}
 }
 
@@ -155,5 +181,9 @@ impl RayTraceScene {
 		for obj in self.objects.iter_mut() {
 			obj.init(frame);
 		}
+	}
+	
+	pub fn get_objects(&self) -> &Vec<Box<RayTraceObject>> {
+		&self.objects
 	}
 }

@@ -1,7 +1,7 @@
-use ray_tracer::vecmath::Vector3;
-use ray_tracer::vecmath::{vec3_cross, vec3_dot, vec3_normalized};
+use vecmath::Vector3;
+use vecmath::{vec3_cross, vec3_dot, vec3_normalized};
 
-use ray_tracer::{RayTraceObject, RayTraceRay, RayTraceRayHit, RayTraceMaterial};
+use {RayTraceObject, RayTraceRay, RayTraceRayHit, RayTraceMaterial, AABB};
 
 #[allow(dead_code)]
 struct RayTraceObjectPlane {
@@ -26,6 +26,10 @@ impl RayTraceObjectPlane {
 #[allow(unused_variables)]
 impl RayTraceObject for RayTraceObjectPlane {
 	fn init(&mut self, frame: usize) { }
+
+	fn get_aabb(&self) -> Option<&AABB> {
+		return None;
+	}
 
 	fn next_hit(&self, ray: &RayTraceRay) -> Option<RayTraceRayHit> {
 		let surface_normal: Vector3<f64> = vec3_cross(self.vec1, self.vec2);

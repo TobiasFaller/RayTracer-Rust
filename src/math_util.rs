@@ -1,4 +1,4 @@
-use ray_tracer::vecmath::{Matrix3, Vector3, mat3_id, row_mat3_mul};
+use vecmath::{Matrix3, Vector3, mat3_id, row_mat3_mul};
 
 #[allow(dead_code)]
 pub fn rotate_z(angle: f64) -> Matrix3<f64> {
