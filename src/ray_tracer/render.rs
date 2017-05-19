@@ -66,6 +66,6 @@ impl RayTracer {
 	}
 
 	fn compute_color_for_ray(&mut self, ray: &RayTraceRay, scene: &RayTraceScene, params: &RayTraceParams) -> RayTraceColor {
-		RayTraceColor::new_with(ray.get_position()[0] as f32, ray.get_position()[1] as f32, 0.0, 1.0)
+		RayTraceColor::new_with(ray.get_direction()[0] as f32, ray.get_direction()[1] as f32, ray.get_direction()[2] as f32, 1.0)
 	}
 }

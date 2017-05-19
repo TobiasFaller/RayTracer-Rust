@@ -17,8 +17,9 @@ fn main() {
 	let out_params = RayTraceOutputParams::new(image_width, image_height, 1);
 	let params = RayTraceParams::new();
 
-	//let mut camera = RayTracerCameraPerspective::new(&out_params, 10.0, 5.0, 10.0);
-	let mut camera = RayTracerCameraOrthorgonal::new(&out_params, 2.0, 2.0);
+	let mut camera = RayTracerCameraPerspective::new(&out_params, 10.0, 5.0, 2.0);
+	//let mut camera = RayTracerCameraOrthorgonal::new(&out_params, 2.0, 2.0);
+
 	let mut scene = RayTraceScene::new();
 	let mut source = RayTraceSource::new(&mut scene, &mut camera, &out_params, &params);
 
