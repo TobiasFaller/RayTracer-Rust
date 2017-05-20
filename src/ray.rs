@@ -1,6 +1,6 @@
 use vecmath::Vector3;
 
-use RayTraceMaterial;
+use object::RayTraceMaterial;
 
 #[allow(dead_code)]
 pub struct RayTraceRay {

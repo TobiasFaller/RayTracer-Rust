@@ -1,24 +1,27 @@
 use vecmath::Vector3;
 use vecmath::{vec3_cross, vec3_dot, vec3_normalized};
 
-use {RayTraceObject, RayTraceRay, RayTraceRayHit, RayTraceMaterial, AABB};
+use {RayTraceRay, RayTraceRayHit, AABB};
+use object::{RayTraceMaterial, RayTraceObject};
 
 #[allow(dead_code)]
-struct RayTraceObjectPlane {
+pub struct RayTraceObjectPlane {
 	position: Vector3<f64>,
 	vec1: Vector3<f64>,
 	vec2: Vector3<f64>,
-	material: RayTraceMaterial
+	material: RayTraceMaterial,
+	aabb: AABB
 }
 
 #[allow(dead_code)]
 impl RayTraceObjectPlane {
-	fn new(position: Vector3<f64>, vec1: Vector3<f64>, vec2: Vector3<f64>, material: RayTraceMaterial) -> RayTraceObjectPlane {
+	pub fn new(position: Vector3<f64>, vec1: Vector3<f64>, vec2: Vector3<f64>, material: RayTraceMaterial) -> RayTraceObjectPlane {
 		RayTraceObjectPlane {
 			position: position,
 			vec1: vec1,
 			vec2: vec2,
-			material: material
+			material: material,
+			aabb: AABB::new([-0.5, 0.0, -1.5], [0.5, 0.5, -0.5])
 		}
 	}
 }
@@ -28,7 +31,7 @@ impl RayTraceObject for RayTraceObjectPlane {
 	fn init(&mut self, frame: usize) { }
 
 	fn get_aabb(&self) -> Option<&AABB> {
-		return None;
+		return Some(&self.aabb);
 	}
 
 	fn next_hit(&self, ray: &RayTraceRay) -> Option<RayTraceRayHit> {

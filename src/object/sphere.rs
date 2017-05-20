@@ -1,6 +1,6 @@
 use vecmath::Vector3;
 
-use {RayTraceObject, RayTraceRay, RayTraceRayHit};
+use {RayTraceRay, RayTraceRayHit};
 use anim::RayTraceAnimPosition;
 
 struct RayTraceObjectSphere {

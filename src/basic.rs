@@ -1,8 +1,9 @@
 use std::io::Error as IOError;
 use std::vec::Vec;
 
-use {RayTraceColor, RayTraceObject};
+use RayTraceColor;
 use camera::RayTraceCamera;
+use object::RayTraceObject;
 
 pub trait RayTraceSink {
 	fn init(&mut self, width: usize, height: usize, frames: usize) -> Result<(), IOError>;
@@ -185,5 +186,9 @@ impl RayTraceScene {
 	
 	pub fn get_objects(&self) -> &Vec<Box<RayTraceObject>> {
 		&self.objects
+	}
+	
+	pub fn add_object(&mut self, object: Box<RayTraceObject>) {
+		self.objects.push(object);
 	}
 }

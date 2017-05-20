@@ -79,12 +79,13 @@ impl RayTracer {
 		for object in scene.get_objects().iter() {
 			if let Some(aabb) = object.get_aabb() {
 				if !aabb.is_hit(ray) {
-					continue;
+					return params.get_background_color().clone();
 				}
 				
-				if let Some(hit) = object.next_hit(ray) {
+				return RayTraceColor::black();
+				/*if let Some(hit) = object.next_hit(ray) {
 					ray_hits.push(hit);
-				}
+				}*/
 			}
 		}
 
@@ -93,6 +94,6 @@ impl RayTracer {
 			return params.get_background_color().clone();
 		}
 
-		RayTraceColor::new_with(ray.get_direction()[0] as f32, ray.get_direction()[1] as f32, ray.get_direction()[2] as f32, 1.0)
+		RayTraceColor::black()
 	}
 }

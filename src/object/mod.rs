@@ -1,6 +1,8 @@
 mod sphere;
 mod plane;
 
+pub use self::plane::RayTraceObjectPlane;
+
 use {RayTraceRay, RayTraceRayHit, RayTraceColor, AABB};
 
 pub trait RayTraceObject {
