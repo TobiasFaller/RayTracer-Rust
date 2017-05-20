@@ -22,8 +22,8 @@ struct WorkingData {
 
 #[allow(dead_code)]
 impl<'a> RayTracerCameraPerspective<'a> {
-	pub fn new(screen: &'a RayTraceOutputParams, width: f64, height: f64, distance: f64) -> RayTracerCameraPerspective {
-		RayTracerCameraPerspective {
+	pub fn new(screen: &'a RayTraceOutputParams, width: f64, height: f64, distance: f64) -> Self {
+		Self {
 			position: [0.0, 0.0, 0.0],
 			rotation: [0.0, 0.0, 0.0],
 			width: width,

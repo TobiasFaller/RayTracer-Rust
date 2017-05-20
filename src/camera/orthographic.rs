@@ -5,7 +5,7 @@ use {RayTraceRay, RayTraceOutputParams};
 use camera::RayTraceCamera;
 
 #[allow(dead_code)]
-pub struct RayTracerCameraOrthorgonal<'a> {
+pub struct RayTracerCameraOrthographic<'a> {
 	position: Vector3<f64>,
 	rotation: Vector3<f64>,
 	width: f64,
@@ -20,9 +20,9 @@ struct WorkingData {
 }
 
 #[allow(dead_code)]
-impl<'a> RayTracerCameraOrthorgonal<'a> {
-	pub fn new(screen: &'a RayTraceOutputParams, width: f64, height: f64) -> RayTracerCameraOrthorgonal {
-		RayTracerCameraOrthorgonal {
+impl<'a> RayTracerCameraOrthographic<'a> {
+	pub fn new(screen: &'a RayTraceOutputParams, width: f64, height: f64) -> Self {
+		Self {
 			position: [0.0, 0.0, 0.0],
 			rotation: [0.0, 0.0, 0.0],
 			width: width,
@@ -44,7 +44,7 @@ impl<'a> RayTracerCameraOrthorgonal<'a> {
 }
 
 #[allow(unused_variables)]
-impl<'a> RayTraceCamera for RayTracerCameraOrthorgonal<'a> {
+impl<'a> RayTraceCamera for RayTracerCameraOrthographic<'a> {
 	fn init(&mut self, frame: usize) {
 		// Start with a view into neg z-axis
 		let plane_vec1 = [self.width / (self.screen.get_width() as f64), 0.0, 0.0];

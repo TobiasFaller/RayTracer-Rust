@@ -1,8 +1,8 @@
 mod perspective;
-mod orthorgonal;
+mod orthographic;
 
 pub use self::perspective::RayTracerCameraPerspective;
-pub use self::orthorgonal::RayTracerCameraOrthorgonal;
+pub use self::orthographic::RayTracerCameraOrthographic;
 
 use RayTraceRay;
 
