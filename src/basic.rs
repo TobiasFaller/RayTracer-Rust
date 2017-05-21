@@ -145,7 +145,7 @@ impl RayTraceJitter {
 	pub fn new() -> RayTraceJitter {
 		RayTraceJitter {
 			size: 0.2_f64,
-			ray_count: 5_usize
+			ray_count: 50_usize
 		}
 	}
 

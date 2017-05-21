@@ -25,12 +25,11 @@ impl AABB {
 		let (x_start, x_end, y_start, y_end, z_start, z_end) = project_points_onto_ray(ray, (self.start, self.end));
 		let (mut check_xy, mut check_xz, mut check_yz) = (true, true, true);
 
-		println!("ray: {},{},{} -> {}, {}, {}", x, y, z, dx, dy, dz);
-		println!("bb: {}, {}, {} - {}, {}, {}", self.start[0], self.start[1], self.start[2], self.end[0], self.end[1], self.end[2]);
-		println!("x: {}-{}, y: {}-{}, z: {}-{}", x_start, x_end, y_start, y_end, z_start, z_end);
+		debug!("ray: {},{},{} -> {}, {}, {}", x, y, z, dx, dy, dz);
+		debug!("bb: {}, {}, {} - {}, {}, {}", self.start[0], self.start[1], self.start[2], self.end[0], self.end[1], self.end[2]);
+		debug!("x: {}-{}, y: {}-{}, z: {}-{}", x_start, x_end, y_start, y_end, z_start, z_end);
 
 		if x_start.is_nan() {
-			println!("Check x!");
 			if x < self.start[0] || x > self.end[0] {
 				return false;
 			}
@@ -42,7 +41,6 @@ impl AABB {
 		}
 
 		if y_start.is_nan() {
-			println!("Check y!");
 			if y < self.start[1] || y > self.end[1] {
 				return false;
 			}
@@ -54,7 +52,6 @@ impl AABB {
 		}
 
 		if z_start.is_nan() {
-			println!("Check z!");
 			if z < self.start[2] || z > self.end[2] {
 				return false;
 			}
@@ -80,7 +77,6 @@ impl AABB {
 			return false;
 		}
 
-		println!("Hit!");
 		return true;
 	}
 }

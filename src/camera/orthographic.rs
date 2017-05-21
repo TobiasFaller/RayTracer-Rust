@@ -48,7 +48,7 @@ impl<'a> RayTraceCamera for RayTracerCameraOrthographic<'a> {
 	fn init(&mut self, frame: usize) {
 		// Start with a view into neg z-axis
 		let plane_vec1 = [self.width / (self.screen.get_width() as f64), 0.0, 0.0];
-		let plane_vec2 = [0.0, self.height / (self.screen.get_height() as f64), 0.0];
+		let plane_vec2 = [0.0, -self.height / (self.screen.get_height() as f64), 0.0];
 		let normal_vec = [0.0, 0.0, -1.0];
 
 		let rot = rotate_xyz(self.rotation);

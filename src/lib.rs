@@ -1,6 +1,9 @@
 #![feature(box_syntax, box_patterns)]
 #![feature(slice_patterns)]
 
+#[macro_use]
+extern crate log;
+
 extern crate vecmath;
 extern crate rand;
 

@@ -17,7 +17,7 @@ pub struct RayTracerCameraPerspective<'a> {
 
 struct WorkingData {
 	plane_vec: [Vector3<f64>; 2],
-	plane_position: Vector3<f64>
+	plane_offset: Vector3<f64>
 }
 
 #[allow(dead_code)]
@@ -50,14 +50,14 @@ impl<'a> RayTraceCamera for RayTracerCameraPerspective<'a> {
 	fn init(&mut self, frame: usize) {
 		// Start with a view into neg z-axis
 		let plane_vec1 = [self.width / (self.screen.get_width() as f64), 0.0, 0.0];
-		let plane_vec2 = [0.0, self.height / (self.screen.get_height() as f64), 0.0];
+		let plane_vec2 = [0.0, -self.height / (self.screen.get_height() as f64), 0.0];
 		let normal_vec = [0.0, 0.0, -1.0];
 
 		let rot = rotate_xyz(self.rotation);
 
 		self.data = Some(WorkingData {
 			plane_vec: [row_mat3_transform(rot, plane_vec1), row_mat3_transform(rot, plane_vec2)],
-			plane_position: vec3_add(self.position, vec3_scale(normal_vec, self.distance))
+			plane_offset: vec3_scale(row_mat3_transform(rot, normal_vec), self.distance)
 		});
 	}
 
@@ -67,9 +67,7 @@ impl<'a> RayTraceCamera for RayTracerCameraPerspective<'a> {
 			let offset_y = vec3_scale(data.plane_vec[1], (y - self.screen.get_height() as f64 / 2.0));
 			let offset = vec3_add(offset_x, offset_y);
 
-			let head = vec3_add(data.plane_position, offset);
-			let direction = vec3_sub(head, self.position);
-
+			let direction = vec3_add(data.plane_offset, offset);
 			return RayTraceRay::new(self.position, vec3_normalized(direction));
 		} else {
 			panic!("Camera was not initialized!");
