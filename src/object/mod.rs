@@ -1,7 +1,10 @@
-mod sphere;
-mod plane;
+mod hit_box;
+//mod plane;
+//mod sphere;
 
-pub use self::plane::RayTraceObjectPlane;
+pub use self::hit_box::RayTraceObjectHitBox;
+//pub use self::plane::RayTraceObjectPlane;
+//pub use self::sphere::RayTraceObjectSphere;
 
 use {RayTraceRay, RayTraceRayHit, RayTraceColor, AABB};
 

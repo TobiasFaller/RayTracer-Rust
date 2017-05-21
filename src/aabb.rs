@@ -91,14 +91,15 @@ fn project_points_onto_ray(ray: &RayTraceRay, points: (Vector3<f64>, Vector3<f64
 	let r_dir = ray.get_direction();
 
 	for dim in 0..3 {
-		if r_dir[dim] == 0.0 {
+		// Ray is orthogonal to this dimension
+		if r_dir[dim].abs() < 1.0e-10 {
 			res[dim << 1] = f64::NAN;
 			res[(dim << 1) + 1] = f64::NAN;
 			continue;
 		}
 
-		let start = r_dir[dim] / (points.0[dim] - r_pos[dim]);
-		let end = r_dir[dim] / (points.1[dim] - r_pos[dim]);
+		let start = (points.0[dim] - r_pos[dim]) / r_dir[dim];
+		let end = (points.1[dim] - r_pos[dim]) / r_dir[dim];
 
 		if end < start {
 			res[dim << 1] = end;

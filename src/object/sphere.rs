@@ -1,4 +1,4 @@
-use vecmath::Vector3;
+/*use vecmath::Vector3;
 
 use {RayTraceRay, RayTraceRayHit};
 use anim::RayTraceAnimPosition;
@@ -11,8 +11,8 @@ struct RayTraceObjectSphere {
 }
 
 impl RayTraceObjectSphere {
-	fn new(position: Vector3<f64>, size: Vector3<f64>) -> RayTraceObjectSphere {
-		RayTraceObjectSphere {
+	fn new(position: Vector3<f64>, size: Vector3<f64>) -> Self {
+		Self {
 			position: position,
 			size: size,
 			anim_position: None,
@@ -25,7 +25,7 @@ impl RayTraceObjectSphere {
 	}
 }
 
-/*impl RayTraceObject for RayTraceObjectSphere {
+impl RayTraceObject for RayTraceObjectSphere {
 	fn init(&mut self, frame: usize) {
 		self.final_position = if let Some(anim) = self.anim_position { anim.new_position(self.position, frame) } else { self.position };
 	}

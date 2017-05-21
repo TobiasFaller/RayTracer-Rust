@@ -1,4 +1,4 @@
-use vecmath::Vector3;
+/*use vecmath::Vector3;
 use vecmath::{vec3_cross, vec3_dot, vec3_normalized};
 
 use {RayTraceRay, RayTraceRayHit, AABB};
@@ -15,8 +15,8 @@ pub struct RayTraceObjectPlane {
 
 #[allow(dead_code)]
 impl RayTraceObjectPlane {
-	pub fn new(position: Vector3<f64>, vec1: Vector3<f64>, vec2: Vector3<f64>, material: RayTraceMaterial) -> RayTraceObjectPlane {
-		RayTraceObjectPlane {
+	pub fn new(position: Vector3<f64>, vec1: Vector3<f64>, vec2: Vector3<f64>, material: RayTraceMaterial) -> Self {
+		Self {
 			position: position,
 			vec1: vec1,
 			vec2: vec2,
@@ -44,4 +44,4 @@ impl RayTraceObject for RayTraceObjectPlane {
 		// TODO: Calculate hit-point
 		return Some(RayTraceRayHit::new(self.position, n, self.material.clone()));
 	}
-}
+}*/

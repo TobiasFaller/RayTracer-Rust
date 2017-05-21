@@ -50,16 +50,14 @@ impl RayTracer {
 				let mut rng = thread_rng();
 
 				let mut color = RayTraceColor::new();
-				let color_factor = 1.0_f32 / (ray_count as f32);
-				
 				for _ in 0..ray_count {
-					let jx = x as f64 + ((rng.next_f64() / f64::MAX) * 2.0 - 1.0) * jitter_size;
-					let jy = y as f64 + ((rng.next_f64() / f64::MAX) * 2.0 - 1.0) * jitter_size;
+					let jx = x as f64 + rng.gen_range(-1.0, 1.0) * jitter_size;
+					let jy = y as f64 + rng.gen_range(-1.0, 1.0) * jitter_size;
 
 					let ray = camera.make_ray(jx, jy);
 					let ray_color = self.compute_color_for_ray(&ray, scene, params, 0);
 
-					color += ray_color * color_factor;
+					color += ray_color / (ray_count as f32);
 				}
 
 				return color;
@@ -82,10 +80,9 @@ impl RayTracer {
 					return params.get_background_color().clone();
 				}
 				
-				return RayTraceColor::black();
-				/*if let Some(hit) = object.next_hit(ray) {
+				if let Some(hit) = object.next_hit(ray) {
 					ray_hits.push(hit);
-				}*/
+				}
 			}
 		}
 
@@ -94,6 +91,6 @@ impl RayTracer {
 			return params.get_background_color().clone();
 		}
 
-		RayTraceColor::black()
+		return ray_hits.remove(0).get_surface_material().get_color().clone();
 	}
 }
