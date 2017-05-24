@@ -1,8 +1,8 @@
-mod hit_box;
+mod qube;
 //mod plane;
 //mod sphere;
 
-pub use self::hit_box::RayTraceObjectHitBox;
+pub use self::qube::RayTraceObjectQube;
 //pub use self::plane::RayTraceObjectPlane;
 //pub use self::sphere::RayTraceObjectSphere;
 

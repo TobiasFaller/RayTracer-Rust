@@ -28,6 +28,7 @@ impl RayTraceRay {
 
 #[allow(dead_code)]
 pub struct RayTraceRayHit {
+	distance: f64,
 	position: Vector3<f64>,
 	surface_normal: Vector3<f64>,
 	surface: RayTraceMaterial
@@ -35,8 +36,9 @@ pub struct RayTraceRayHit {
 
 #[allow(dead_code)]
 impl RayTraceRayHit {
-	pub fn new(position: Vector3<f64>, surface_normal: Vector3<f64>, surface: RayTraceMaterial) -> RayTraceRayHit {
+	pub fn new(distance: f64, position: Vector3<f64>, surface_normal: Vector3<f64>, surface: RayTraceMaterial) -> RayTraceRayHit {
 		RayTraceRayHit {
+			distance: distance,
 			position: position,
 			surface_normal: surface_normal,
 			surface: surface
