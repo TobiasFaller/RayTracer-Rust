@@ -13,6 +13,8 @@ pub struct AABB {
 #[allow(dead_code)]
 impl AABB {
 	pub fn new(x1: Vector3<f64>, x2: Vector3<f64>) -> Self {
+		info!("AABB: {}, {}, {} to {}, {}, {}", x1[0], x1[1], x1[2], x2[0], x2[1], x2[2]);
+
 		Self {
 			start: [x1[0].min(x2[0]), x1[1].min(x2[1]), x1[2].min(x2[2])],
 			end: [x1[0].max(x2[0]), x1[1].max(x2[1]), x1[2].max(x2[2])],

@@ -22,7 +22,11 @@ struct WorkingData {
 
 #[allow(dead_code)]
 impl<'a> RayTracerCameraPerspective<'a> {
-	pub fn new(screen: &'a RayTraceOutputParams, width: f64, height: f64, distance: f64) -> Self {
+	pub fn new(screen: &'a RayTraceOutputParams, scale: f64, distance: f64) -> Self {
+		Self::new_with(screen, (screen.get_width() as f64) / (screen.get_height() as f64) * scale, scale, distance)
+	}
+
+	pub fn new_with(screen: &'a RayTraceOutputParams, width: f64, height: f64, distance: f64) -> Self {
 		Self {
 			position: [0.0, 0.0, 0.0],
 			rotation: [0.0, 0.0, 0.0],
@@ -67,7 +71,7 @@ impl<'a> RayTraceCamera for RayTracerCameraPerspective<'a> {
 			let offset_y = vec3_scale(data.plane_vec[1], (y - self.screen.get_height() as f64 / 2.0));
 			let offset = vec3_add(offset_x, offset_y);
 
-			let direction = vec3_add(data.plane_offset, offset);
+			let direction = vec3_sub(vec3_add(data.plane_offset, offset), self.position);
 			return RayTraceRay::new(self.position, vec3_normalized(direction));
 		} else {
 			panic!("Camera was not initialized!");

@@ -45,6 +45,10 @@ impl RayTraceRayHit {
 		}
 	}
 
+	pub fn get_distance(&self) -> f64 {
+		self.distance
+	}
+
 	pub fn get_position(&self) -> &Vector3<f64> {
 		&self.position
 	}

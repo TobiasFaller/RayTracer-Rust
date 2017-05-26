@@ -21,7 +21,11 @@ struct WorkingData {
 
 #[allow(dead_code)]
 impl<'a> RayTracerCameraOrthographic<'a> {
-	pub fn new(screen: &'a RayTraceOutputParams, width: f64, height: f64) -> Self {
+	pub fn new(screen: &'a RayTraceOutputParams, scale: f64) -> Self {
+		Self::new_with(screen, (screen.get_width() as f64) / (screen.get_height() as f64) * scale, scale)
+	}
+
+	pub fn new_with(screen: &'a RayTraceOutputParams, width: f64, height: f64) -> Self {
 		Self {
 			position: [0.0, 0.0, 0.0],
 			rotation: [0.0, 0.0, 0.0],

@@ -14,7 +14,8 @@ impl RayTracer {
 		Self { }
 	}
 
-	pub fn render<Sink: RayTraceSink, Camera: RayTraceCamera>(&mut self, source: &mut RayTraceSource<Camera>, sink: &mut Sink) -> Result<(), IOError> {
+	pub fn render<Sink: RayTraceSink, Camera: RayTraceCamera>(&mut self, source: &mut RayTraceSource<Camera>,
+			sink: &mut Sink) -> Result<(), IOError> {
 		let (scene, camera, params, out_params) = source.get();
 
 		try!(sink.init(out_params.get_width(), out_params.get_height(), out_params.get_frames()));
@@ -38,7 +39,9 @@ impl RayTracer {
 		Ok(())
 	}
 
-	fn compute_color<Camera: RayTraceCamera>(&mut self, camera: &Camera, scene: &RayTraceScene, params: &RayTraceParams, x: usize, y: usize) -> RayTraceColor {
+	fn compute_color<Camera: RayTraceCamera>(&mut self, camera: &Camera, scene: &RayTraceScene,
+			params: &RayTraceParams, x: usize, y: usize) -> RayTraceColor {
+		debug!("Rendering pixel {}, {}:", x, y);
 		match params.get_jitter() {
 			&None => {
 				let ray = camera.make_ray(x as f64, y as f64);
@@ -65,12 +68,14 @@ impl RayTracer {
 		}
 	}
 
-	fn compute_color_for_ray(&mut self, ray: &RayTraceRay, scene: &RayTraceScene, params: &RayTraceParams, depth: usize) -> RayTraceColor {
+	fn compute_color_for_ray(&mut self, ray: &RayTraceRay, scene: &RayTraceScene, params: &RayTraceParams,
+			depth: usize) -> RayTraceColor {
 		// If this is an indirect ray we cancel after a maximum depth
 		if depth > params.get_max_depth() {
+			info!("Max depth");
 			return params.get_indirect_color().clone();
 		}
-		
+
 		// Collect all ray hits
 		let mut ray_hits = Vec::<RayTraceRayHit>::new();
 		
@@ -79,10 +84,12 @@ impl RayTracer {
 				if !aabb.is_hit(ray) {
 					return params.get_background_color().clone();
 				}
-				
+
 				if let Some(hit) = object.next_hit(ray) {
 					ray_hits.push(hit);
 				}
+			} else if let Some(hit) = object.next_hit(ray) {
+				ray_hits.push(hit);
 			}
 		}
 
@@ -91,6 +98,7 @@ impl RayTracer {
 			return params.get_background_color().clone();
 		}
 
+		debug!("Object was hit!");
 		return ray_hits.remove(0).get_surface_material().get_color().clone();
 	}
 }

@@ -28,14 +28,14 @@ pub fn rotate_y(angle: f64) -> Matrix3<f64> {
 pub fn rotate_xyz(angle: Vector3<f64>) -> Matrix3<f64> {
 	let mut rot = mat3_id();
 
+	if angle[1] != 0.0 {
+		rot = rotate_y(angle[1]);
+	}
 	if angle[0] != 0.0 {
-		rot = rotate_x(angle[0]);
+		rot = row_mat3_mul(rot, rotate_x(angle[0]));
 	}
 	if angle[2] != 0.0 {
 		rot = row_mat3_mul(rot, rotate_z(angle[2]));
-	}
-	if angle[1] != 0.0 {
-		rot = row_mat3_mul(rot, rotate_y(angle[1]));
 	}
 
 	return rot;
