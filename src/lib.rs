@@ -7,6 +7,9 @@ extern crate log;
 extern crate vecmath;
 extern crate rand;
 
+//extern crate time;
+extern crate scoped_threadpool;
+
 mod color;
 mod basic;
 mod ray;

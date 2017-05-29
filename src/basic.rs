@@ -22,8 +22,9 @@ pub struct RayTraceSource<'a, Camera: 'a> where Camera: RayTraceCamera {
 
 #[allow(dead_code)]
 impl<'a, Camera: 'a> RayTraceSource<'a, Camera> where Camera: RayTraceCamera {
-	pub fn new(scene: &'a mut RayTraceScene, camera: &'a mut Camera, out_params: &'a RayTraceOutputParams, params: &'a RayTraceParams) -> RayTraceSource<'a, Camera> {
-		RayTraceSource {
+	pub fn new(scene: &'a mut RayTraceScene, camera: &'a mut Camera, out_params: &'a RayTraceOutputParams,
+			params: &'a RayTraceParams) -> Self {
+		Self {
 			scene: scene,
 			camera: camera,
 			out_params: out_params,
@@ -145,7 +146,7 @@ impl RayTraceJitter {
 	pub fn new() -> RayTraceJitter {
 		RayTraceJitter {
 			size: 0.2_f64,
-			ray_count: 50_usize
+			ray_count: 25_usize
 		}
 	}
 
@@ -167,7 +168,7 @@ impl RayTraceJitter {
 
 #[allow(dead_code)]
 pub struct RayTraceScene {
-	objects: Vec<Box<RayTraceObject>>
+	objects: Vec<Box<RayTraceObject + Sync>>
 }
 
 #[allow(dead_code, unused_variables)]
@@ -184,11 +185,11 @@ impl RayTraceScene {
 		}
 	}
 	
-	pub fn get_objects(&self) -> &Vec<Box<RayTraceObject>> {
+	pub fn get_objects(&self) -> &Vec<Box<RayTraceObject + Sync>> {
 		&self.objects
 	}
 	
-	pub fn add_object(&mut self, object: Box<RayTraceObject>) {
+	pub fn add_object(&mut self, object: Box<RayTraceObject + Sync>) {
 		self.objects.push(object);
 	}
 }

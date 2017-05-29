@@ -1,7 +1,10 @@
 use std::f64;
 use std::io::Error as IOError;
+use std::sync::{Arc, Mutex};
 
 use rand::{Rng, thread_rng};
+
+use scoped_threadpool::Pool;
 
 use {RayTraceColor, RayTraceRay, RayTraceSink, RayTraceSource, RayTraceScene, RayTraceParams, RayTraceRayHit};
 use camera::RayTraceCamera;
@@ -14,91 +17,116 @@ impl RayTracer {
 		Self { }
 	}
 
-	pub fn render<Sink: RayTraceSink, Camera: RayTraceCamera>(&mut self, source: &mut RayTraceSource<Camera>,
+	pub fn render<Sink: RayTraceSink + Sync + Send, Camera: RayTraceCamera + Sync>(&mut self, source: &mut RayTraceSource<Camera>,
 			sink: &mut Sink) -> Result<(), IOError> {
 		let (scene, camera, params, out_params) = source.get();
 
 		try!(sink.init(out_params.get_width(), out_params.get_height(), out_params.get_frames()));
 
+		let arc_params = Arc::new(params);
+		let arc_sink = Arc::new(Mutex::new(sink));
+		let mut arc_camera: Arc<&mut Camera> = Arc::new(camera);
+		let mut arc_scene: Arc<&mut RayTraceScene> = Arc::new(scene);
+
+		let mut thread_pool = Pool::new(8);
+
 		for frame in 0..out_params.get_frames() {
-			try!(sink.start_frame(frame));
+			//let start = time::now();
 
-			camera.init(frame);
-			scene.init(frame);
+			try!(arc_sink.lock().unwrap().start_frame(frame));
 
-			for y in 0..out_params.get_height() {
-				for x in 0..out_params.get_width() {
-					let color = self.compute_color(camera, scene, params, x, y);
-					try!(sink.set_sample(x, y, &color));
+			Arc::get_mut(&mut arc_camera).unwrap().init(frame);
+			Arc::get_mut(&mut arc_scene).unwrap().init(frame);
+
+			thread_pool.scoped(|scoped| {
+				for y in 0..out_params.get_height() {
+					for x in 0..out_params.get_width() {
+						{
+							let scoped_camera: Arc<&Camera> = Arc::new(*arc_camera);
+							let scoped_scene: Arc<&RayTraceScene> = Arc::new(*arc_scene);
+							let scoped_params = arc_params.clone();
+							let scoped_sink = arc_sink.clone();
+
+							scoped.execute(move || {
+								let color = compute_color(scoped_camera, scoped_scene, scoped_params, x, y);
+								match scoped_sink.lock().unwrap().set_sample(x, y, &color) {
+									Ok(()) => { },
+									Err(err) => { panic!(err) }
+								};
+							});
+						}
+					}
 				}
-			}
+			});
 
-			try!(sink.finish_frame(frame));
+			try!(arc_sink.lock().unwrap().finish_frame(frame));
+
+			// info!("Rendered frame in {}", (time::new() - start).to_std().unwrap());
 		}
 
 		Ok(())
 	}
+}
 
-	fn compute_color<Camera: RayTraceCamera>(&mut self, camera: &Camera, scene: &RayTraceScene,
-			params: &RayTraceParams, x: usize, y: usize) -> RayTraceColor {
-		debug!("Rendering pixel {}, {}:", x, y);
-		match params.get_jitter() {
-			&None => {
-				let ray = camera.make_ray(x as f64, y as f64);
-				return self.compute_color_for_ray(&ray, scene, params, 0);
-			},
-			&Some(ref jitter) => {
-				let ray_count = jitter.get_ray_count();
-				let jitter_size = jitter.get_size();
-				let mut rng = thread_rng();
+fn compute_color<Camera: RayTraceCamera>(camera: Arc<&Camera>, scene: Arc<&RayTraceScene>,
+		params: Arc<&RayTraceParams>, x: usize, y: usize) -> RayTraceColor {
+	debug!("Rendering pixel {}, {}:", x, y);
+	match params.get_jitter() {
+		&None => {
+			let ray = camera.make_ray(x as f64, y as f64);
+			return compute_color_for_ray(&ray, *scene, *params, 0);
+		},
+		&Some(ref jitter) => {
+			let ray_count = jitter.get_ray_count();
+			let jitter_size = jitter.get_size();
+			let mut rng = thread_rng();
 
-				let mut color = RayTraceColor::new();
-				for _ in 0..ray_count {
-					let jx = x as f64 + rng.gen_range(-1.0, 1.0) * jitter_size;
-					let jy = y as f64 + rng.gen_range(-1.0, 1.0) * jitter_size;
+			let mut color = RayTraceColor::new();
+			for _ in 0..ray_count {
+				let jx = x as f64 + rng.gen_range(-1.0, 1.0) * jitter_size;
+				let jy = y as f64 + rng.gen_range(-1.0, 1.0) * jitter_size;
 
-					let ray = camera.make_ray(jx, jy);
-					let ray_color = self.compute_color_for_ray(&ray, scene, params, 0);
+				let ray = camera.make_ray(jx, jy);
+				let ray_color = compute_color_for_ray(&ray, *scene, *params, 0);
 
-					color += ray_color / (ray_count as f32);
-				}
-
-				return color;
+				color += ray_color / (ray_count as f32);
 			}
+
+			return color;
 		}
 	}
+}
 
-	fn compute_color_for_ray(&mut self, ray: &RayTraceRay, scene: &RayTraceScene, params: &RayTraceParams,
-			depth: usize) -> RayTraceColor {
-		// If this is an indirect ray we cancel after a maximum depth
-		if depth > params.get_max_depth() {
-			info!("Max depth");
-			return params.get_indirect_color().clone();
-		}
+fn compute_color_for_ray(ray: &RayTraceRay, scene: &RayTraceScene, params: &RayTraceParams,
+		depth: usize) -> RayTraceColor {
+	// If this is an indirect ray we cancel after a maximum depth
+	if depth > params.get_max_depth() {
+		info!("Max depth");
+		return params.get_indirect_color().clone();
+	}
 
-		// Collect all ray hits
-		let mut ray_hits = Vec::<RayTraceRayHit>::new();
-		
-		for object in scene.get_objects().iter() {
-			if let Some(aabb) = object.get_aabb() {
-				if !aabb.is_hit(ray) {
-					return params.get_background_color().clone();
-				}
+	// Collect all ray hits
+	let mut ray_hits = Vec::<RayTraceRayHit>::new();
 
-				if let Some(hit) = object.next_hit(ray) {
-					ray_hits.push(hit);
-				}
-			} else if let Some(hit) = object.next_hit(ray) {
+	for object in scene.get_objects().iter() {
+		if let Some(aabb) = object.get_aabb() {
+			if !aabb.is_hit(ray) {
+				return params.get_background_color().clone();
+			}
+
+			if let Some(hit) = object.next_hit(ray) {
 				ray_hits.push(hit);
 			}
+		} else if let Some(hit) = object.next_hit(ray) {
+			ray_hits.push(hit);
 		}
-
-		// Return background color on no hit
-		if ray_hits.is_empty() {
-			return params.get_background_color().clone();
-		}
-
-		debug!("Object was hit!");
-		return ray_hits.remove(0).get_surface_material().get_color().clone();
 	}
+
+	// Return background color on no hit
+	if ray_hits.is_empty() {
+		return params.get_background_color().clone();
+	}
+
+	debug!("Object was hit!");
+	return ray_hits.remove(0).get_surface_material().get_color().clone();
 }
