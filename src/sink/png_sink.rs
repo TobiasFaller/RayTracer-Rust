@@ -3,10 +3,11 @@ use std::path::Path;
 use std::fs::File;
 use std::io::BufWriter;
 
+use sink::RayTraceSink;
 use sink::image::ColorType;
 use sink::image::png::PNGEncoder;
 
-use {RayTraceColor, RayTraceSink};
+use RayTraceColor;
 
 #[allow(dead_code)]
 pub struct PngSink {

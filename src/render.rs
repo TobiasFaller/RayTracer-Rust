@@ -1,11 +1,21 @@
 use std::f64;
+use std::cmp::Ordering;
 use std::io::Error as IOError;
 use std::sync::{Arc, Mutex};
 
+use time::now;
+
 use scoped_threadpool::Pool;
 
-use {RayTraceColor, RayTraceRay, RayTraceSink, RayTraceSource, RayTraceScene, RayTraceParams, RayTraceRayHit};
+use RayTraceColor;
+use RayTraceRay;
+
 use camera::RayTraceCamera;
+use hit::RayTraceRayHit;
+use params::RayTraceParams;
+use sink::RayTraceSink;
+use scene::RayTraceScene;
+use source::RayTraceSource;
 
 pub struct RayTracer { }
 
@@ -15,8 +25,8 @@ impl RayTracer {
 		Self { }
 	}
 
-	pub fn render<Sink: RayTraceSink + Sync + Send, Camera: RayTraceCamera + Sync>(&mut self, source: &mut RayTraceSource<Camera>,
-			sink: &mut Sink) -> Result<(), IOError> {
+	pub fn render<Sink: RayTraceSink + Sync + Send, Camera: RayTraceCamera + Sync>(&mut self,
+			source: &mut RayTraceSource<Camera>, sink: &mut Sink) -> Result<(), IOError> {
 		let (scene, camera, params, out_params) = source.get();
 
 		try!(sink.init(out_params.get_width(), out_params.get_height(), out_params.get_frames()));
@@ -29,7 +39,7 @@ impl RayTracer {
 		let mut thread_pool = Pool::new(8);
 
 		for frame in 0..out_params.get_frames() {
-			//let start = time::now();
+			let start = now();
 
 			try!(arc_sink.lock().unwrap().start_frame(frame));
 
@@ -59,7 +69,7 @@ impl RayTracer {
 
 			try!(arc_sink.lock().unwrap().finish_frame(frame));
 
-			// info!("Rendered frame in {}", (time::new() - start).to_std().unwrap());
+			info!("Rendered frame in {}", (now() - start));
 		}
 
 		Ok(())
@@ -71,7 +81,7 @@ fn compute_color<Camera: RayTraceCamera>(camera: Arc<&Camera>, scene: Arc<&RayTr
 	debug!("Rendering pixel {}, {}:", x, y);
 	match params.get_jitter() {
 		&None => {
-			let ray = camera.make_ray(x as f64, y as f64);
+			let ray = camera.make_ray(x as f64 + 0.5_f64, y as f64 + 0.5_f64);
 			return compute_color_for_ray(&ray, *scene, *params, 0);
 		},
 		&Some(ref jitter) => {
@@ -91,11 +101,10 @@ fn compute_color<Camera: RayTraceCamera>(camera: Arc<&Camera>, scene: Arc<&RayTr
 	}
 }
 
-fn compute_color_for_ray(ray: &RayTraceRay, scene: &RayTraceScene, params: &RayTraceParams,
-		depth: usize) -> RayTraceColor {
+fn compute_color_for_ray(ray: &RayTraceRay, scene: &RayTraceScene, params: &RayTraceParams, depth: usize)
+		-> RayTraceColor {
 	// If this is an indirect ray we cancel after a maximum depth
 	if depth > params.get_max_depth() {
-		info!("Max depth");
 		return params.get_indirect_color().clone();
 	}
 
@@ -121,6 +130,24 @@ fn compute_color_for_ray(ray: &RayTraceRay, scene: &RayTraceScene, params: &RayT
 		return params.get_background_color().clone();
 	}
 
+	ray_hits.sort_by(|a, b| {
+		match a.get_distance().partial_cmp(&b.get_distance()) {
+			Some(ordering) => {
+				ordering
+			},
+			None => {
+				Ordering::Equal
+			}
+		}
+	});
+
+	for (i, hit) in ray_hits.iter().enumerate() {
+		debug!("Hit {}: {}", i, hit.get_distance());
+	}
+
 	debug!("Object was hit!");
-	return ray_hits.remove(0).get_surface_material().get_color().clone();
+	let hit = ray_hits.remove(0);
+	let material = hit.get_surface_material();
+	let material_color = material.get_color();
+	return material_color;
 }

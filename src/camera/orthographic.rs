@@ -1,8 +1,9 @@
 use vecmath::*;
 use math_util::*;
 
-use {RayTraceRay, RayTraceOutputParams};
+use RayTraceRay;
 use camera::RayTraceCamera;
+use params::RayTraceOutputParams;
 
 #[allow(dead_code)]
 pub struct RayTracerCameraOrthographic<'a> {

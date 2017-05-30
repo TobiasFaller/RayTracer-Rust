@@ -1,6 +1,6 @@
 use vecmath::Vector3;
-
-use object::RayTraceMaterial;
+use vecmath::vec3_add;
+use vecmath::vec3_scale;
 
 #[allow(dead_code)]
 pub struct RayTraceRay {
@@ -24,40 +24,8 @@ impl RayTraceRay {
 	pub fn get_direction(&self) -> &Vector3<f64> {
 		&self.direction
 	}
-}
 
-#[allow(dead_code)]
-pub struct RayTraceRayHit {
-	distance: f64,
-	position: Vector3<f64>,
-	surface_normal: Vector3<f64>,
-	surface: RayTraceMaterial
-}
-
-#[allow(dead_code)]
-impl RayTraceRayHit {
-	pub fn new(distance: f64, position: Vector3<f64>, surface_normal: Vector3<f64>, surface: RayTraceMaterial) -> RayTraceRayHit {
-		RayTraceRayHit {
-			distance: distance,
-			position: position,
-			surface_normal: surface_normal,
-			surface: surface
-		}
-	}
-
-	pub fn get_distance(&self) -> f64 {
-		self.distance
-	}
-
-	pub fn get_position(&self) -> &Vector3<f64> {
-		&self.position
-	}
-
-	pub fn get_surface_normal(&self) -> &Vector3<f64> {
-		&self.surface_normal
-	}
-
-	pub fn get_surface_material(&self) -> &RayTraceMaterial {
-		&self.surface
+	pub fn get_position_on_ray(&self, distance: f64) -> Vector3<f64> {
+		vec3_add(self.position, vec3_scale(self.direction, distance))
 	}
 }
