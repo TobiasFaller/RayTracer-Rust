@@ -2,8 +2,6 @@ use std::f64;
 use std::io::Error as IOError;
 use std::sync::{Arc, Mutex};
 
-use rand::{Rng, thread_rng};
-
 use scoped_threadpool::Pool;
 
 use {RayTraceColor, RayTraceRay, RayTraceSink, RayTraceSource, RayTraceScene, RayTraceParams, RayTraceRayHit};
@@ -78,14 +76,10 @@ fn compute_color<Camera: RayTraceCamera>(camera: Arc<&Camera>, scene: Arc<&RayTr
 		},
 		&Some(ref jitter) => {
 			let ray_count = jitter.get_ray_count();
-			let jitter_size = jitter.get_size();
-			let mut rng = thread_rng();
 
 			let mut color = RayTraceColor::new();
 			for _ in 0..ray_count {
-				let jx = x as f64 + rng.gen_range(-1.0, 1.0) * jitter_size;
-				let jy = y as f64 + rng.gen_range(-1.0, 1.0) * jitter_size;
-
+				let (jx, jy) = jitter.apply(x as f64, y as f64);
 				let ray = camera.make_ray(jx, jy);
 				let ray_color = compute_color_for_ray(&ray, *scene, *params, 0);
 

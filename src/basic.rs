@@ -1,6 +1,8 @@
 use std::io::Error as IOError;
 use std::vec::Vec;
 
+use rand::{Rng, thread_rng};
+
 use RayTraceColor;
 use camera::RayTraceCamera;
 use object::RayTraceObject;
@@ -85,7 +87,7 @@ impl RayTraceOutputParams {
 
 #[allow(dead_code)]
 pub struct RayTraceParams {
-	ray_jitter: Option<RayTraceJitter>,
+	ray_jitter: Option<Box<RayTraceJitter + Sync>>,
 	max_depth: usize,
 	background_color: RayTraceColor,
 	indirect_color: RayTraceColor
@@ -102,11 +104,11 @@ impl RayTraceParams {
 		}
 	}
 
-	pub fn set_ray_jitter(&mut self, jitter: Option<RayTraceJitter>) {
+	pub fn set_ray_jitter(&mut self, jitter: Option<Box<RayTraceJitter + Sync>>) {
 		self.ray_jitter = jitter;
 	}
 	
-	pub fn get_jitter(&self) -> &Option<RayTraceJitter> {
+	pub fn get_jitter(&self) -> &Option<Box<RayTraceJitter + Sync>> {
 		&self.ray_jitter
 	}
 	
@@ -135,23 +137,28 @@ impl RayTraceParams {
 	}
 }
 
+pub trait RayTraceJitter {
+	fn apply(&self, x: f64, y: f64) -> (f64, f64);
+	fn get_ray_count(&self) -> usize;
+}
+
 #[allow(dead_code)]
-pub struct RayTraceJitter {
+pub struct RayTraceRandomJitter {
 	size: f64,
 	ray_count: usize
 }
 
 #[allow(dead_code)]
-impl RayTraceJitter {
-	pub fn new() -> RayTraceJitter {
-		RayTraceJitter {
+impl RayTraceRandomJitter {
+	pub fn new() -> Self {
+		Self {
 			size: 0.2_f64,
 			ray_count: 25_usize
 		}
 	}
 
-	pub fn new_with(size: f64, ray_count: usize) -> RayTraceJitter {
-		RayTraceJitter {
+	pub fn new_with(size: f64, ray_count: usize) -> Self {
+		Self {
 			size: size,
 			ray_count: ray_count
 		}
@@ -163,6 +170,17 @@ impl RayTraceJitter {
 
 	pub fn get_ray_count(&self) -> usize {
 		self.ray_count
+	}
+}
+
+impl RayTraceJitter for RayTraceRandomJitter {
+	fn get_ray_count(&self) -> usize {
+		self.ray_count
+	}
+	fn apply(&self, x: f64, y: f64) -> (f64, f64) {
+		let mut rng = thread_rng();
+		(x + rng.gen_range(-1.0, 1.0) * self.size,
+		y + rng.gen_range(-1.0, 1.0) * self.size)
 	}
 }
 
