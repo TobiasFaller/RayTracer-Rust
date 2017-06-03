@@ -6,9 +6,9 @@ pub use self::cube::RayTraceObjectCube;
 pub use self::plane::RayTraceObjectPlane;
 //pub use self::sphere::RayTraceObjectSphere;
 
-use AABB;
-use RayTraceRay;
+use aabb::AABB;
 use hit::RayTraceRayHit;
+use ray::RayTraceRay;
 
 pub trait RayTraceObject {
 	fn init(&mut self, frame: usize);

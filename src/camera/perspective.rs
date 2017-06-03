@@ -1,9 +1,9 @@
 use vecmath::*;
 use math_util::*;
 
-use RayTraceRay;
 use camera::RayTraceCamera;
 use params::RayTraceOutputParams;
+use ray::RayTraceRay;
 
 #[allow(dead_code)]
 pub struct RayTracerCameraPerspective<'a> {

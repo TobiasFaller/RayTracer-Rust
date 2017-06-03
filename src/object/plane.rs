@@ -2,11 +2,11 @@ use vecmath::row_mat3_transform;
 use vecmath::vec3_dot;
 use vecmath::Vector3;
 
-use AABB;
-use RayTraceRay;
+use aabb::AABB;
 use hit::RayTraceRayHit;
 use material::RayTraceMaterial;
 use object::RayTraceObject;
+use ray::RayTraceRay;
 
 use math_util::compute_plane_hit;
 use math_util::rotate_xyz;

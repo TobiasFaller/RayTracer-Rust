@@ -18,7 +18,7 @@ impl RayTraceColor {
 			a: 0.0
 		}
 	}
-	
+
 	pub fn new_with(r: f32, g: f32, b: f32, a: f32) -> Self {
 		RayTraceColor {
 			r: r,
@@ -27,7 +27,7 @@ impl RayTraceColor {
 			a: a
 		}
 	}
-	
+
 	pub fn transparent() -> Self {
 		RayTraceColor {
 			r: 1.0,
@@ -36,7 +36,7 @@ impl RayTraceColor {
 			a: 0.0
 		}
 	}
-	
+
 	pub fn white() -> Self {
 		RayTraceColor {
 			r: 1.0,
@@ -45,7 +45,7 @@ impl RayTraceColor {
 			a: 1.0
 		}
 	}
-	
+
 	pub fn black() -> Self {
 		RayTraceColor {
 			r: 0.0,
@@ -54,62 +54,92 @@ impl RayTraceColor {
 			a: 1.0
 		}
 	}
-	
+
 	pub fn set(&mut self, r: f32, g: f32, b: f32, a: f32) {
 		self.r = r;
 		self.g = g;
 		self.b = b;
 		self.a = a;
 	}
-	
+
 	pub fn set_r(&mut self, r: f32) {
 		self.r = r;
 	}
-	
+
 	pub fn set_g(&mut self, g: f32) {
 		self.g = g;
 	}
-	
+
 	pub fn set_b(&mut self, b: f32) {
 		self.b = b;
 	}
-	
+
 	pub fn set_a(&mut self, a: f32) {
 		self.a = a;
 	}
-	
+
 	pub fn get(&self) -> (f32, f32, f32, f32) {
 		(self.r, self.g, self.b, self.a)
 	}
-	
+
 	pub fn get_r(&self) -> f32 {
 		self.r
 	}
-	
+
 	pub fn get_g(&self) -> f32 {
 		self.g
 	}
-	
+
 	pub fn get_b(&self) -> f32 {
 		self.b
 	}
-	
+
 	pub fn get_a(&self) -> f32 {
 		self.a
 	}
-	
+
 	pub fn add(&mut self, r: f32, g: f32, b: f32, a: f32) {
 		self.r += r;
 		self.g += g;
 		self.b += b;
 		self.a += a;
 	}
-	
+
 	pub fn sub(&mut self, r: f32, g: f32, b: f32, a: f32) {
 		self.r -= r;
 		self.g -= g;
 		self.b -= b;
 		self.a -= a;
+	}
+
+	pub fn mix(&self, color: &RayTraceColor, factor: f32) -> Self {
+		if factor >= 1.0 {
+			color.clone()
+		} else if factor <= 0.0 {
+			self.clone()
+		} else {
+			Self {
+				r: self.r * factor + (1.0_f32 - factor) * color.r,
+				g: self.g * factor + (1.0_f32 - factor) * color.g,
+				b: self.b * factor + (1.0_f32 - factor) * color.b,
+				a: self.a * factor + (1.0_f32 - factor) * color.a
+			}
+		}
+	}
+}
+
+pub fn mix_color(color_a: &RayTraceColor, color_b: &RayTraceColor, factor: f32) -> RayTraceColor {
+	if factor >= 1.0 {
+		color_b.clone()
+	} else if factor <= 0.0 {
+		color_a.clone()
+	} else {
+		RayTraceColor {
+			r: (1.0_f32 - factor) * color_a.r + factor * color_b.r,
+			g: (1.0_f32 - factor) * color_a.g + factor * color_b.g,
+			b: (1.0_f32 - factor) * color_a.b + factor * color_b.b,
+			a: (1.0_f32 - factor) * color_a.a + factor * color_b.a
+		}
 	}
 }
 
@@ -126,7 +156,7 @@ impl Clone for RayTraceColor {
 
 impl Add for RayTraceColor {
 	type Output = RayTraceColor;
-	
+
 	fn add(self, rhs: RayTraceColor) -> RayTraceColor {
 		RayTraceColor {
 			r: self.r + rhs.r,
@@ -148,7 +178,7 @@ impl AddAssign for RayTraceColor {
 
 impl Sub for RayTraceColor {
 	type Output = RayTraceColor;
-	
+
 	fn sub(self, rhs: RayTraceColor) -> RayTraceColor {
 		RayTraceColor {
 			r: self.r - rhs.r,
@@ -170,13 +200,26 @@ impl SubAssign for RayTraceColor {
 
 impl Mul<f32> for RayTraceColor {
 	type Output = RayTraceColor;
-	
+
 	fn mul(self, rhs: f32) -> RayTraceColor {
 		RayTraceColor {
 			r: self.r * rhs,
 			g: self.g * rhs,
 			b: self.b * rhs,
 			a: self.a * rhs
+		}
+	}
+}
+
+impl Mul<RayTraceColor> for RayTraceColor {
+	type Output = RayTraceColor;
+
+	fn mul(self, rhs: RayTraceColor) -> RayTraceColor {
+		RayTraceColor {
+			r: self.r * rhs.r,
+			g: self.g * rhs.g,
+			b: self.b * rhs.b,
+			a: self.a * rhs.a
 		}
 	}
 }
@@ -192,7 +235,7 @@ impl MulAssign<f32> for RayTraceColor {
 
 impl Div<f32> for RayTraceColor {
 	type Output = RayTraceColor;
-	
+
 	fn div(self, rhs: f32) -> RayTraceColor {
 		RayTraceColor {
 			r: self.r / rhs,

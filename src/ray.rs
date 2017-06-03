@@ -1,6 +1,8 @@
 use vecmath::Vector3;
 use vecmath::vec3_add;
 use vecmath::vec3_scale;
+use vecmath::vec3_sub;
+use vecmath::vec3_normalized;
 
 #[allow(dead_code)]
 pub struct RayTraceRay {
@@ -14,6 +16,14 @@ impl RayTraceRay {
 		RayTraceRay {
 			position: position,
 			direction: direction
+		}
+	}
+
+	pub fn new_to(position: Vector3<f64>, to: Vector3<f64>) -> Self {
+		let direction = vec3_sub(to, position);
+		Self {
+			position: position,
+			direction: vec3_normalized(direction)
 		}
 	}
 

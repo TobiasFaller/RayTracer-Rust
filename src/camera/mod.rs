@@ -4,7 +4,7 @@ mod orthographic;
 pub use self::perspective::RayTracerCameraPerspective;
 pub use self::orthographic::RayTracerCameraOrthographic;
 
-use RayTraceRay;
+use ray::RayTraceRay;
 
 pub trait RayTraceCamera {
 	fn init(&mut self, frame: usize);

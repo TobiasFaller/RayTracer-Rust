@@ -1,7 +1,7 @@
 use vecmath::{Matrix3, Vector3, mat3_id, row_mat3_mul};
 use vecmath::{vec4_sub, vec4_scale};
 
-use RayTraceRay;
+use ray::RayTraceRay;
 
 #[allow(dead_code)]
 pub fn rotate_z(angle: f64) -> Matrix3<f64> {
@@ -31,14 +31,14 @@ pub fn rotate_y(angle: f64) -> Matrix3<f64> {
 pub fn rotate_xyz(angle: Vector3<f64>) -> Matrix3<f64> {
 	let mut rot = mat3_id();
 
-	if angle[1] != 0.0 {
-		rot = rotate_y(angle[1]);
+	if angle[2] != 0.0 {
+		rot = rotate_z(angle[2]);
 	}
 	if angle[0] != 0.0 {
-		rot = row_mat3_mul(rot, rotate_x(angle[0]));
+		rot = row_mat3_mul(rotate_x(angle[0]), rot);
 	}
-	if angle[2] != 0.0 {
-		rot = row_mat3_mul(rot, rotate_z(angle[2]));
+	if angle[1] != 0.0 {
+		rot = row_mat3_mul(rotate_y(angle[1]), rot);
 	}
 
 	return rot;

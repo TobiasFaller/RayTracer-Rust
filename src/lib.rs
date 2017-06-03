@@ -12,13 +12,14 @@ extern crate scoped_threadpool;
 
 mod aabb;
 mod color;
+mod hit;
 mod ray;
 
 mod math_util;
 
 pub mod anim;
 pub mod camera;
-pub mod hit;
+pub mod light;
 pub mod material;
 pub mod object;
 pub mod params;
@@ -27,6 +28,5 @@ pub mod sink;
 pub mod scene;
 pub mod source;
 
-pub use self::aabb::AABB;
 pub use self::color::RayTraceColor;
-pub use self::ray::RayTraceRay;
+pub use self::color::mix_color;

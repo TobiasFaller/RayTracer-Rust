@@ -4,11 +4,11 @@ use vecmath::Vector3;
 use vecmath::{vec3_add, vec3_sub, vec3_scale, vec3_neg};
 use vecmath::row_mat3_transform;
 
-use AABB;
-use RayTraceRay;
+use aabb::AABB;
 use hit::RayTraceRayHit;
 use material::RayTraceMaterial;
 use object::RayTraceObject;
+use ray::RayTraceRay;
 
 use math_util::compute_plane_hit;
 use math_util::rotate_xyz;

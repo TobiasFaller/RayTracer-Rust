@@ -2,7 +2,7 @@ use std::f64;
 
 use vecmath::Vector3;
 
-use RayTraceRay;
+use ray::RayTraceRay;
 
 #[allow(dead_code)]
 pub struct AABB {
