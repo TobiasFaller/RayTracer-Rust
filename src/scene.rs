@@ -26,8 +26,11 @@ impl RayTraceScene {
 		&self.objects
 	}
 
-	pub fn add_object(&mut self, object: Box<RayTraceObject + Sync>) {
+	pub fn add_object(&mut self, object: Box<RayTraceObject + Sync>) -> &Box<RayTraceObject + Sync> {
 		self.objects.push(object);
+
+		let length = self.objects.len();
+		&self.objects[length - 1]
 	}
 
 	pub fn get_spot_lights(&self) -> &Vec<RayTraceSpotLight> {

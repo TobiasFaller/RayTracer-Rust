@@ -1,5 +1,7 @@
-use RayTraceColor;
+use color::RayTraceColor;
+
 use hit::RayTraceMaterialHit;
+
 use material::RayTraceMaterial;
 
 pub struct RayTraceSimpleMaterial {

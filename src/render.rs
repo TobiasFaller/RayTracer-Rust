@@ -8,12 +8,8 @@ use time::now;
 
 use scoped_threadpool::Pool;
 
-use vecmath::{vec3_dot, vec3_normalized_sub};
-
-use RayTraceColor;
-use mix_color;
-
 use camera::RayTraceCamera;
+use color::RayTraceColor;
 use hit::RayTraceRayHit;
 use params::RayTraceParams;
 use ray::RayTraceRay;
@@ -31,7 +27,7 @@ impl RayTracer {
 
 	pub fn render<Sink: RayTraceSink + Sync + Send, Camera: RayTraceCamera + Sync>(&mut self,
 			source: &mut RayTraceSource<Camera>, sink: &mut Sink) -> Result<(), IOError> {
-		let (scene, camera, params, out_params) = source.get();
+		let (mut scene, mut camera, params, out_params, mut animations) = source.get();
 
 		try!(sink.init(out_params.get_width(), out_params.get_height(), out_params.get_frames()));
 
@@ -46,6 +42,10 @@ impl RayTracer {
 			let start = now();
 
 			try!(arc_sink.lock().unwrap().start_frame(frame));
+
+			if let Some(ref mut anim) = *animations {
+				anim.apply(frame);
+			}
 
 			Arc::get_mut(&mut arc_camera).unwrap().init(frame);
 			Arc::get_mut(&mut arc_scene).unwrap().init(frame);
@@ -145,67 +145,10 @@ fn compute_color_for_ray(ray: &RayTraceRay, scene: &RayTraceScene, params: &RayT
 		}
 	});
 
-	/*for (i, hit) in ray_hits.iter().enumerate() {
-		debug!("Hit {}: {}", i, hit.get_distance());
-	}*/
-
 	let hit = ray_hits.remove(0);
-	let material = hit.get_surface_material();
-	let surface_normal = hit.get_surface_normal();
-	let ray_direction = ray.get_direction();
-	let hit_distance = hit.get_distance();
-
-	let material_color = material.get_color();
-	let ambient_light = params.get_ambient_light();
-	let diffuse_light = params.get_diffuse_light();
-	let specular_light = params.get_specular_light();
-
-	// Ambient offset
-	let ambient_color = *ambient_light * material_color;
-	let ambient_component = mix_color(&RayTraceColor::black(), &ambient_color, ambient_light.get_a());
-
-	// Diffuse part only dependent on camera position
-	let diffuse = -vec3_dot(surface_normal.clone(), ray_direction.clone()) as f32;
-
-	let light_ray_start = ray.get_position_on_ray(hit_distance - 1e-3);
-	let mut specular = RayTraceColor::new_with(0.0, 0.0, 0.0, 0.0);
-	let mut specular_lights = 0;
-	for light in scene.get_spot_lights() {
-		let light_color = light.get_color();
-		let light_position = light.get_position();
-
-		let light_ray_direction = vec3_normalized_sub(light_position.clone(), light_ray_start);
-		let light_ray = RayTraceRay::new(light_ray_start, light_ray_direction);
-		let mut light_ray_intersected = false;
-
-		for object in scene.get_objects().iter() {
-			if let Some(aabb) = object.get_aabb() {
-				if !aabb.is_hit(&light_ray) {
-					continue;
-				}
-
-				if let Some(_) = object.next_hit(&light_ray) {
-					light_ray_intersected = true;
-					break;
-				}
-			} else if let Some(_) = object.next_hit(&light_ray) {
-				light_ray_intersected = true;
-				break;
-			}
-		}
-
-		if !light_ray_intersected {
-			specular_lights += 1;
-			specular += *light_color * light_color.get_a()
-				* (vec3_dot(light_ray_direction, surface_normal.clone()) as f32).powf(specular_light);
-		}
+	if let &Some(ref shading_fn) = params.get_shading() {
+		return shading_fn.apply(ray, &hit, scene, params);
+	} else {
+		return hit.get_surface_material().get_color();
 	}
-
-	if specular_lights != 0 {
-		specular /= specular_lights as f32;
-	}
-
-	let mut final_color = ambient_component + material_color * diffuse_light * diffuse + specular;
-	final_color.set_a(material_color.get_a());
-	return final_color;
 }

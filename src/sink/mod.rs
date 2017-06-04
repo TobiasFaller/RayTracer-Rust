@@ -2,7 +2,7 @@ extern crate image;
 
 use std::io::Error as IOError;
 
-use RayTraceColor;
+use color::RayTraceColor;
 
 mod png_sink;
 mod jpeg_sink;

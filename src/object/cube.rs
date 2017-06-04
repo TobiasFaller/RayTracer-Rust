@@ -5,6 +5,7 @@ use vecmath::{vec3_add, vec3_sub, vec3_scale, vec3_neg};
 use vecmath::row_mat3_transform;
 
 use aabb::AABB;
+use anim::{RayTraceSetPosition, RayTraceSetRotation};
 use hit::RayTraceRayHit;
 use material::RayTraceMaterial;
 use object::RayTraceObject;
@@ -17,7 +18,6 @@ enum CubeMaterial {
 	OnePerCube(Box<RayTraceMaterial + Sync>),
 	OnePerSide([Box<RayTraceMaterial + Sync>; 6])
 }
-
 
 #[allow(dead_code)]
 pub struct RayTraceObjectCube {
@@ -51,10 +51,12 @@ impl RayTraceObjectCube {
 
 	pub fn set_rotation(&mut self, rotation: Vector3<f64>) {
 		self.rotation = rotation;
+		self.data = None;
 	}
 
 	pub fn set_position(&mut self, position: Vector3<f64>) {
 		self.center = position;
+		self.data = None;
 	}
 
 	fn get_material(&self, index: usize) -> &Box<RayTraceMaterial + Sync> {
@@ -66,6 +68,20 @@ impl RayTraceObjectCube {
 				&material
 			}
 		}
+	}
+}
+
+impl RayTraceSetPosition for RayTraceObjectCube {
+	fn set_position(&mut self, position: Vector3<f64>) {
+		self.center = position;
+		self.data = None;
+	}
+}
+
+impl RayTraceSetRotation for RayTraceObjectCube {
+	fn set_rotation(&mut self, rotation: Vector3<f64>) {
+		self.rotation = rotation;
+		self.data = None;
 	}
 }
 

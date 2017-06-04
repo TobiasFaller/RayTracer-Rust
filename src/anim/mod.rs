@@ -1,5 +1,9 @@
-use vecmath::Vector3;
+mod anim;
+mod animations;
+mod basic;
+mod bound;
 
-pub trait RayTraceAnimVector3 {
-	fn next_frame(&self, initial: Vector3<f64>, frame: usize) -> Vector3<f64>;
-}
+pub use self::anim::*;
+pub use self::animations::*;
+pub use self::basic::*;
+pub use self::bound::*;

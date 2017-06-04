@@ -1,6 +1,9 @@
 use rand::{Rng, thread_rng};
 
-use RayTraceColor;
+use color::RayTraceColor;
+
+use light::RayTraceShading;
+use light::RayTracePhongShading;
 
 pub trait RayTraceJitter {
 	fn apply(&self, x: f64, y: f64) -> (f64, f64);
@@ -40,12 +43,11 @@ impl RayTraceOutputParams {
 #[allow(dead_code)]
 pub struct RayTraceParams {
 	ray_jitter: Option<Box<RayTraceJitter + Sync>>,
+	shading: Option<Box<RayTraceShading + Sync>>,
 	max_depth: usize,
 	background_color: RayTraceColor,
 	indirect_color: RayTraceColor,
-	ambient_light: RayTraceColor,
-	diffuse_light: f32,
-	specular_light: f32
+	ambient_light: RayTraceColor
 }
 
 #[allow(dead_code)]
@@ -57,8 +59,7 @@ impl RayTraceParams {
 			background_color: RayTraceColor::transparent(),
 			indirect_color: RayTraceColor::white(),
 			ambient_light: RayTraceColor::new_with(1.0, 1.0, 1.0, 0.4),
-			diffuse_light: 0.8,
-			specular_light: 12.0
+			shading: Some(box RayTracePhongShading::new())
 		}
 	}
 
@@ -102,20 +103,12 @@ impl RayTraceParams {
 		&self.ambient_light
 	}
 
-	pub fn set_diffuse_light(&mut self, diffuse_light: f32) {
-		self.diffuse_light = diffuse_light;
+	pub fn get_shading(&self) -> &Option<Box<RayTraceShading + Sync>> {
+		&self.shading
 	}
 
-	pub fn get_diffuse_light(&self) -> f32 {
-		self.diffuse_light
-	}
-
-	pub fn set_specular_light(&mut self, specular_light: f32) {
-		self.specular_light = specular_light;
-	}
-
-	pub fn get_specular_light(&self) -> f32 {
-		self.specular_light
+	pub fn set_shading(&mut self, shading: Option<Box<RayTraceShading + Sync>>) {
+		self.shading = shading;
 	}
 }
 

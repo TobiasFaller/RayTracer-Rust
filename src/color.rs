@@ -128,21 +128,6 @@ impl RayTraceColor {
 	}
 }
 
-pub fn mix_color(color_a: &RayTraceColor, color_b: &RayTraceColor, factor: f32) -> RayTraceColor {
-	if factor >= 1.0 {
-		color_b.clone()
-	} else if factor <= 0.0 {
-		color_a.clone()
-	} else {
-		RayTraceColor {
-			r: (1.0_f32 - factor) * color_a.r + factor * color_b.r,
-			g: (1.0_f32 - factor) * color_a.g + factor * color_b.g,
-			b: (1.0_f32 - factor) * color_a.b + factor * color_b.b,
-			a: (1.0_f32 - factor) * color_a.a + factor * color_b.a
-		}
-	}
-}
-
 impl Clone for RayTraceColor {
 	fn clone(&self) -> RayTraceColor {
 		RayTraceColor {
@@ -252,5 +237,20 @@ impl DivAssign<f32> for RayTraceColor {
 		self.g /= rhs;
 		self.b /= rhs;
 		self.a /= rhs;
+	}
+}
+
+pub fn mix_color(color_a: &RayTraceColor, color_b: &RayTraceColor, factor: f32) -> RayTraceColor {
+	if factor >= 1.0 {
+		color_b.clone()
+	} else if factor <= 0.0 {
+		color_a.clone()
+	} else {
+		RayTraceColor {
+			r: (1.0_f32 - factor) * color_a.r + factor * color_b.r,
+			g: (1.0_f32 - factor) * color_a.g + factor * color_b.g,
+			b: (1.0_f32 - factor) * color_a.b + factor * color_b.b,
+			a: (1.0_f32 - factor) * color_a.a + factor * color_b.a
+		}
 	}
 }
