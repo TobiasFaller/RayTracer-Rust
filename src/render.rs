@@ -1,6 +1,6 @@
+use std::cmp::Ordering;
 use std::f64;
 use std::f32;
-use std::cmp::Ordering;
 use std::io::Error as IOError;
 use std::sync::{Arc, Mutex};
 
@@ -25,15 +25,15 @@ impl RayTracer {
 		Self { }
 	}
 
-	pub fn render<Sink: RayTraceSink + Sync + Send, Camera: RayTraceCamera + Sync>(&mut self,
-			source: &mut RayTraceSource<Camera>, sink: &mut Sink) -> Result<(), IOError> {
-		let (mut scene, mut camera, params, out_params, mut animations) = source.get();
+	pub fn render(&mut self, source: &mut RayTraceSource, sink: &mut Box<RayTraceSink>)
+			-> Result<(), IOError> {
+		let (mut scene, mut camera, params, out_params/*, animations*/) = source.get();
 
 		try!(sink.init(out_params.get_width(), out_params.get_height(), out_params.get_frames()));
 
 		let arc_params = Arc::new(params);
 		let arc_sink = Arc::new(Mutex::new(sink));
-		let mut arc_camera: Arc<&mut Camera> = Arc::new(camera);
+		let mut arc_camera: Arc<&mut Box<RayTraceCamera>> = Arc::new(camera);
 		let mut arc_scene: Arc<&mut RayTraceScene> = Arc::new(scene);
 
 		let mut thread_pool = Pool::new(8);
@@ -43,9 +43,9 @@ impl RayTracer {
 
 			try!(arc_sink.lock().unwrap().start_frame(frame));
 
-			if let Some(ref mut anim) = *animations {
+			/*if let Some(ref mut anim) = *animations {
 				anim.apply(frame);
-			}
+			}*/
 
 			Arc::get_mut(&mut arc_camera).unwrap().init(frame);
 			Arc::get_mut(&mut arc_scene).unwrap().init(frame);
@@ -53,20 +53,18 @@ impl RayTracer {
 			thread_pool.scoped(|scoped| {
 				for y in 0..out_params.get_height() {
 					for x in 0..out_params.get_width() {
-						{
-							let scoped_camera: Arc<&Camera> = Arc::new(*arc_camera);
-							let scoped_scene: Arc<&RayTraceScene> = Arc::new(*arc_scene);
-							let scoped_params = arc_params.clone();
-							let scoped_sink = arc_sink.clone();
+						let scoped_camera: Arc<&Box<RayTraceCamera>> = Arc::new(&arc_camera);
+						let scoped_scene: Arc<&RayTraceScene> = Arc::new(&arc_scene);
+						let scoped_params = arc_params.clone();
+						let scoped_sink = arc_sink.clone();
 
-							scoped.execute(move || {
-								let color = compute_color(scoped_camera, scoped_scene, scoped_params, x, y);
-								match scoped_sink.lock().unwrap().set_sample(x, y, &color) {
-									Ok(()) => { },
-									Err(err) => { panic!(err) }
-								};
-							});
-						}
+						scoped.execute(move || {
+							let color = compute_color(scoped_camera, scoped_scene, scoped_params, x, y);
+							match scoped_sink.lock().unwrap().set_sample(x, y, &color) {
+								Ok(()) => { },
+								Err(err) => { panic!(err) }
+							};
+						});
 					}
 				}
 			});
@@ -80,8 +78,8 @@ impl RayTracer {
 	}
 }
 
-fn compute_color<Camera: RayTraceCamera>(camera: Arc<&Camera>, scene: Arc<&RayTraceScene>,
-		params: Arc<&RayTraceParams>, x: usize, y: usize) -> RayTraceColor {
+fn compute_color(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>, params: Arc<&RayTraceParams>,
+		x: usize, y: usize) -> RayTraceColor {
 	debug!("Rendering pixel {}, {}:", x, y);
 	match params.get_jitter() {
 		&None => {
@@ -149,6 +147,6 @@ fn compute_color_for_ray(ray: &RayTraceRay, scene: &RayTraceScene, params: &RayT
 	if let &Some(ref shading_fn) = params.get_shading() {
 		return shading_fn.apply(ray, &hit, scene, params);
 	} else {
-		return hit.get_surface_material().get_color();
+		return hit.get_surface_material().get_color().clone();
 	}
 }

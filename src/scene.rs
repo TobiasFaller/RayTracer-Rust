@@ -3,7 +3,7 @@ use light::RayTraceSpotLight;
 
 #[allow(dead_code)]
 pub struct RayTraceScene {
-	objects: Vec<Box<RayTraceObject + Sync>>,
+	objects: Vec<Box<RayTraceObject + Send + Sync>>,
 	spot_lights: Vec<RayTraceSpotLight>
 }
 
@@ -22,15 +22,12 @@ impl RayTraceScene {
 		}
 	}
 
-	pub fn get_objects(&self) -> &Vec<Box<RayTraceObject + Sync>> {
+	pub fn get_objects(&self) -> &Vec<Box<RayTraceObject + Send + Sync>> {
 		&self.objects
 	}
 
-	pub fn add_object(&mut self, object: Box<RayTraceObject + Sync>) -> &Box<RayTraceObject + Sync> {
-		self.objects.push(object);
-
-		let length = self.objects.len();
-		&self.objects[length - 1]
+	pub fn add_object(&mut self, object: Box<RayTraceObject + Send + Sync>) {
+		self.objects.push(object)
 	}
 
 	pub fn get_spot_lights(&self) -> &Vec<RayTraceSpotLight> {

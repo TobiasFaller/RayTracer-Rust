@@ -1,13 +1,13 @@
 use color::RayTraceColor;
 
-#[derive(Copy)]
+#[derive(Debug, Clone)]
 pub struct RayTraceMaterialHit {
 	color: RayTraceColor,
 	diffuse_light: f32,
 	specular_light: f32
 }
 
-impl RayTraceMaterialHit {
+impl<'a> RayTraceMaterialHit {
 	pub fn with_color(color: RayTraceColor) -> Self {
 		Self {
 			color: color,
@@ -16,8 +16,8 @@ impl RayTraceMaterialHit {
 		}
 	}
 
-	pub fn get_color(&self) -> RayTraceColor {
-		self.color
+	pub fn get_color(&self) -> &RayTraceColor {
+		&self.color
 	}
 
 	pub fn set_color(&mut self, color: RayTraceColor) {
@@ -38,15 +38,5 @@ impl RayTraceMaterialHit {
 
 	pub fn set_specular_light(&mut self, specular_light: f32) {
 		self.specular_light = specular_light;
-	}
-}
-
-impl Clone for RayTraceMaterialHit {
-	fn clone(&self) -> Self {
-		Self {
-			color: self.color.clone(),
-			diffuse_light: self.diffuse_light,
-			specular_light: self.specular_light
-		}
 	}
 }

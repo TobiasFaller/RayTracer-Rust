@@ -1,6 +1,6 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div, DivAssign};
 
-#[derive(Copy)]
+#[derive(Debug, Clone)]
 pub struct RayTraceColor {
 	r: f32,
 	g: f32,
@@ -128,21 +128,23 @@ impl RayTraceColor {
 	}
 }
 
-impl Clone for RayTraceColor {
-	fn clone(&self) -> RayTraceColor {
-		RayTraceColor {
-			r: self.r,
-			g: self.g,
-			b: self.b,
-			a: self.a
-		}
-	}
-}
-
 impl Add for RayTraceColor {
 	type Output = RayTraceColor;
 
 	fn add(self, rhs: RayTraceColor) -> RayTraceColor {
+		RayTraceColor {
+			r: self.r + rhs.r,
+			g: self.g + rhs.g,
+			b: self.b + rhs.b,
+			a: self.a + rhs.a
+		}
+	}
+}
+
+impl<'a> Add for &'a RayTraceColor {
+	type Output = RayTraceColor;
+
+	fn add(self, rhs: &'a RayTraceColor) -> RayTraceColor {
 		RayTraceColor {
 			r: self.r + rhs.r,
 			g: self.g + rhs.g,
@@ -174,6 +176,19 @@ impl Sub for RayTraceColor {
 	}
 }
 
+impl<'a> Sub for &'a RayTraceColor {
+	type Output = RayTraceColor;
+
+	fn sub(self, rhs: &'a RayTraceColor) -> RayTraceColor {
+		RayTraceColor {
+			r: self.r - rhs.r,
+			g: self.g - rhs.g,
+			b: self.b - rhs.b,
+			a: self.a - rhs.a
+		}
+	}
+}
+
 impl SubAssign for RayTraceColor {
 	fn sub_assign(&mut self, rhs: RayTraceColor) {
 		self.r -= rhs.r;
@@ -184,6 +199,19 @@ impl SubAssign for RayTraceColor {
 }
 
 impl Mul<f32> for RayTraceColor {
+	type Output = RayTraceColor;
+
+	fn mul(self, rhs: f32) -> RayTraceColor {
+		RayTraceColor {
+			r: self.r * rhs,
+			g: self.g * rhs,
+			b: self.b * rhs,
+			a: self.a * rhs
+		}
+	}
+}
+
+impl<'a> Mul<f32> for &'a RayTraceColor {
 	type Output = RayTraceColor;
 
 	fn mul(self, rhs: f32) -> RayTraceColor {
@@ -209,6 +237,19 @@ impl Mul<RayTraceColor> for RayTraceColor {
 	}
 }
 
+impl<'a> Mul<&'a RayTraceColor> for &'a RayTraceColor {
+	type Output = RayTraceColor;
+
+	fn mul(self, rhs: &'a RayTraceColor) -> RayTraceColor {
+		RayTraceColor {
+			r: self.r * rhs.r,
+			g: self.g * rhs.g,
+			b: self.b * rhs.b,
+			a: self.a * rhs.a
+		}
+	}
+}
+
 impl MulAssign<f32> for RayTraceColor {
 	fn mul_assign(&mut self, rhs: f32) {
 		self.r *= rhs;
@@ -219,6 +260,19 @@ impl MulAssign<f32> for RayTraceColor {
 }
 
 impl Div<f32> for RayTraceColor {
+	type Output = RayTraceColor;
+
+	fn div(self, rhs: f32) -> RayTraceColor {
+		RayTraceColor {
+			r: self.r / rhs,
+			g: self.g / rhs,
+			b: self.b / rhs,
+			a: self.a / rhs
+		}
+	}
+}
+
+impl<'a> Div<f32> for &'a RayTraceColor {
 	type Output = RayTraceColor;
 
 	fn div(self, rhs: f32) -> RayTraceColor {

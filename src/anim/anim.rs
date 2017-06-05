@@ -5,7 +5,7 @@ pub trait RayTraceAnim<T> {
 }
 
 pub trait RayTraceBoundAnimation {
-	fn next_frame(&mut self, frame: usize);
+	fn next_frame(&self, frame: usize);
 }
 
 pub trait RayTraceSetPosition {

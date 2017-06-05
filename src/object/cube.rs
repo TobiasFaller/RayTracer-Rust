@@ -15,8 +15,8 @@ use math_util::compute_plane_hit;
 use math_util::rotate_xyz;
 
 enum CubeMaterial {
-	OnePerCube(Box<RayTraceMaterial + Sync>),
-	OnePerSide([Box<RayTraceMaterial + Sync>; 6])
+	OnePerCube(Box<RayTraceMaterial + Sync + Send>),
+	OnePerSide([Box<RayTraceMaterial + Sync + Send>; 6])
 }
 
 #[allow(dead_code)]
@@ -29,7 +29,7 @@ pub struct RayTraceObjectCube {
 }
 #[allow(dead_code)]
 impl RayTraceObjectCube {
-	pub fn new(center: Vector3<f64>, size: Vector3<f64>, material: Box<RayTraceMaterial + Sync>) -> Self {
+	pub fn new(center: Vector3<f64>, size: Vector3<f64>, material: Box<RayTraceMaterial + Sync + Send>) -> Self {
 		Self {
 			material: box CubeMaterial::OnePerCube(material),
 			center: center,
@@ -39,7 +39,7 @@ impl RayTraceObjectCube {
 		}
 	}
 
-	pub fn new_with(center: Vector3<f64>, size: Vector3<f64>, materials: [Box<RayTraceMaterial + Sync>; 6]) -> Self {
+	pub fn new_with(center: Vector3<f64>, size: Vector3<f64>, materials: [Box<RayTraceMaterial + Sync + Send>; 6]) -> Self {
 		Self {
 			material: box CubeMaterial::OnePerSide(materials),
 			center: center,
@@ -59,7 +59,7 @@ impl RayTraceObjectCube {
 		self.data = None;
 	}
 
-	fn get_material(&self, index: usize) -> &Box<RayTraceMaterial + Sync> {
+	fn get_material(&self, index: usize) -> &Box<RayTraceMaterial + Sync + Send> {
 		match self.material {
 			box CubeMaterial::OnePerSide(ref materials) => {
 				&materials[index]
@@ -189,8 +189,8 @@ impl RayTraceObject for RayTraceObjectCube {
 	}
 }
 
-fn get_plane_hit(ray: &RayTraceRay, center: Vector3<f64>, size: &Vector3<f64>, normal_vec: Vector3<f64>,
-		vec: [Vector3<f64>; 3], v1: usize, v2: usize, material: &Box<RayTraceMaterial + Sync>)
+fn get_plane_hit<'a>(ray: &RayTraceRay, center: Vector3<f64>, size: &Vector3<f64>, normal_vec: Vector3<f64>,
+		vec: [Vector3<f64>; 3], v1: usize, v2: usize, material: &Box<RayTraceMaterial + Sync + Send>)
 		-> Option<RayTraceRayHit> {
 	if let Some((dist, vec1, vec2)) = compute_plane_hit(ray, center, vec[v1], vec[v2]) {
 		if dist <= 0.0 {

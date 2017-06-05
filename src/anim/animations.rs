@@ -1,7 +1,7 @@
 use anim::RayTraceBoundAnimation;
 
 pub struct RayTraceAnimations {
-	anim: Vec<Box<RayTraceBoundAnimation + Sync>>
+	anim: Vec<Box<RayTraceBoundAnimation>>
 }
 
 impl RayTraceAnimations {

@@ -25,6 +25,6 @@ impl RayTraceSimpleMaterial {
 #[allow(unused_variables)]
 impl RayTraceMaterial for RayTraceSimpleMaterial {
 	fn get_hit(&self, x: f64, y: f64) -> RayTraceMaterialHit {
-		RayTraceMaterialHit::with_color(self.color)
+		RayTraceMaterialHit::with_color(self.color.clone())
 	}
 }

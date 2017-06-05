@@ -34,7 +34,7 @@ impl RayTraceShading for RayTracePhongShading {
 		let specular_light = material.get_specular_light();
 
 		// Ambient offset
-		let ambient_color = *ambient_light * material_color;
+		let ambient_color = ambient_light * material_color;
 		let ambient_component = mix_color(&RayTraceColor::black(), &ambient_color, ambient_light.get_a());
 
 		// Diffuse part only dependent on camera position
@@ -69,7 +69,7 @@ impl RayTraceShading for RayTracePhongShading {
 
 			if !light_ray_intersected {
 				specular_lights += 1;
-				specular += *light_color * light_color.get_a()
+				specular += light_color * light_color.get_a()
 					* (vec3_dot(light_ray_direction, surface_normal.clone()) as f32).powf(specular_light);
 			}
 		}
