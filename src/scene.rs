@@ -1,16 +1,21 @@
+use std::mem;
+
+use nonsync::Unsafe;
+use nonsync::UnsafeRef;
+
 use object::RayTraceObject;
 use light::RayTraceSpotLight;
 
 #[allow(dead_code)]
 pub struct RayTraceScene {
-	objects: Vec<Box<RayTraceObject + Send + Sync>>,
+	objects: Vec<Unsafe<Box<RayTraceObject>>>,
 	spot_lights: Vec<RayTraceSpotLight>
 }
 
 #[allow(dead_code, unused_variables)]
 impl RayTraceScene {
-	pub fn new() -> RayTraceScene {
-		RayTraceScene {
+	pub fn new() -> Self {
+		Self {
 			objects: Vec::new(),
 			spot_lights: Vec::new()
 		}
@@ -22,12 +27,20 @@ impl RayTraceScene {
 		}
 	}
 
-	pub fn get_objects(&self) -> &Vec<Box<RayTraceObject + Send + Sync>> {
+	pub fn get_objects(&self) -> &Vec<Unsafe<Box<RayTraceObject>>> {
 		&self.objects
 	}
 
-	pub fn add_object(&mut self, object: Box<RayTraceObject + Send + Sync>) {
-		self.objects.push(object)
+	pub fn add_object<T: RayTraceObject + 'static>(&mut self, object: Box<T>) -> UnsafeRef<Box<T>> {
+		// Totally safe from here ...
+		let cell = Unsafe::<Box<RayTraceObject>>::new(object);
+		let cell_ref = cell.get_ref();
+
+		self.objects.push(cell);
+
+		unsafe {
+			mem::transmute(cell_ref)
+		}
 	}
 
 	pub fn get_spot_lights(&self) -> &Vec<RayTraceSpotLight> {

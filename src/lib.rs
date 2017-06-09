@@ -1,5 +1,6 @@
 #![feature(box_syntax, box_patterns)]
 #![feature(slice_patterns)]
+#![feature(conservative_impl_trait)]
 
 #[macro_use]
 extern crate log;
@@ -13,6 +14,7 @@ extern crate scoped_threadpool;
 mod aabb;
 mod hit;
 mod ray;
+mod nonsync;
 
 mod math_util;
 

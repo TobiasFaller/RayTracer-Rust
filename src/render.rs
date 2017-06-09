@@ -25,9 +25,8 @@ impl RayTracer {
 		Self { }
 	}
 
-	pub fn render(&mut self, source: &mut RayTraceSource, sink: &mut Box<RayTraceSink>)
-			-> Result<(), IOError> {
-		let (mut scene, mut camera, params, out_params/*, animations*/) = source.get();
+	pub fn render<'a>(&mut self, source: &'a mut RayTraceSource, sink: &'a mut Box<RayTraceSink>) -> Result<(), IOError> {
+		let (mut scene, mut camera, params, out_params, animations) = source.get();
 
 		try!(sink.init(out_params.get_width(), out_params.get_height(), out_params.get_frames()));
 
@@ -43,9 +42,12 @@ impl RayTracer {
 
 			try!(arc_sink.lock().unwrap().start_frame(frame));
 
-			/*if let Some(ref mut anim) = *animations {
-				anim.apply(frame);
-			}*/
+			match animations {
+				&mut Some(ref mut anim) => {
+				
+				}
+				&mut None => {}
+			};
 
 			Arc::get_mut(&mut arc_camera).unwrap().init(frame);
 			Arc::get_mut(&mut arc_scene).unwrap().init(frame);

@@ -10,7 +10,7 @@ use aabb::AABB;
 use hit::RayTraceRayHit;
 use ray::RayTraceRay;
 
-pub trait RayTraceObject {
+pub trait RayTraceObject: Sync + Send {
 	fn init(&mut self, frame: usize);
 	fn get_aabb(&self) -> Option<&AABB>;
 	fn next_hit(&self, ray: &RayTraceRay) -> Option<RayTraceRayHit>;

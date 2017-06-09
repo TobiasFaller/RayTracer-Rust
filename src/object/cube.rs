@@ -5,7 +5,6 @@ use vecmath::{vec3_add, vec3_sub, vec3_scale, vec3_neg};
 use vecmath::row_mat3_transform;
 
 use aabb::AABB;
-use anim::{RayTraceSetPosition, RayTraceSetRotation};
 use hit::RayTraceRayHit;
 use material::RayTraceMaterial;
 use object::RayTraceObject;
@@ -15,8 +14,8 @@ use math_util::compute_plane_hit;
 use math_util::rotate_xyz;
 
 enum CubeMaterial {
-	OnePerCube(Box<RayTraceMaterial + Sync + Send>),
-	OnePerSide([Box<RayTraceMaterial + Sync + Send>; 6])
+	OnePerCube(Box<RayTraceMaterial>),
+	OnePerSide([Box<RayTraceMaterial>; 6])
 }
 
 #[allow(dead_code)]
@@ -27,9 +26,10 @@ pub struct RayTraceObjectCube {
 	rotation: Vector3<f64>,
 	data: Option<WorkingData>
 }
+
 #[allow(dead_code)]
 impl RayTraceObjectCube {
-	pub fn new(center: Vector3<f64>, size: Vector3<f64>, material: Box<RayTraceMaterial + Sync + Send>) -> Self {
+	pub fn new(center: Vector3<f64>, size: Vector3<f64>, material: Box<RayTraceMaterial>) -> Self {
 		Self {
 			material: box CubeMaterial::OnePerCube(material),
 			center: center,
@@ -39,7 +39,7 @@ impl RayTraceObjectCube {
 		}
 	}
 
-	pub fn new_with(center: Vector3<f64>, size: Vector3<f64>, materials: [Box<RayTraceMaterial + Sync + Send>; 6]) -> Self {
+	pub fn new_with(center: Vector3<f64>, size: Vector3<f64>, materials: [Box<RayTraceMaterial>; 6]) -> Self {
 		Self {
 			material: box CubeMaterial::OnePerSide(materials),
 			center: center,
@@ -59,7 +59,7 @@ impl RayTraceObjectCube {
 		self.data = None;
 	}
 
-	fn get_material(&self, index: usize) -> &Box<RayTraceMaterial + Sync + Send> {
+	fn get_material(&self, index: usize) -> &Box<RayTraceMaterial> {
 		match self.material {
 			box CubeMaterial::OnePerSide(ref materials) => {
 				&materials[index]
@@ -69,19 +69,13 @@ impl RayTraceObjectCube {
 			}
 		}
 	}
-}
 
-impl RayTraceSetPosition for RayTraceObjectCube {
-	fn set_position(&mut self, position: Vector3<f64>) {
-		self.center = position;
-		self.data = None;
+	pub fn get_anim_position<'a>(&'a mut self) -> Box<FnMut(Vector3<f64>) + Send + Sync + 'a> {
+		Box::new(move |vec| self.set_position(vec))
 	}
-}
 
-impl RayTraceSetRotation for RayTraceObjectCube {
-	fn set_rotation(&mut self, rotation: Vector3<f64>) {
-		self.rotation = rotation;
-		self.data = None;
+	pub fn get_anim_rotation<'a>(&'a mut self) -> Box<FnMut(Vector3<f64>) + Send + Sync + 'a> {
+		Box::new(move |vec| self.set_rotation(vec))
 	}
 }
 
@@ -189,9 +183,8 @@ impl RayTraceObject for RayTraceObjectCube {
 	}
 }
 
-fn get_plane_hit<'a>(ray: &RayTraceRay, center: Vector3<f64>, size: &Vector3<f64>, normal_vec: Vector3<f64>,
-		vec: [Vector3<f64>; 3], v1: usize, v2: usize, material: &Box<RayTraceMaterial + Sync + Send>)
-		-> Option<RayTraceRayHit> {
+fn get_plane_hit(ray: &RayTraceRay, center: Vector3<f64>, size: &Vector3<f64>, normal_vec: Vector3<f64>,
+		vec: [Vector3<f64>; 3], v1: usize, v2: usize, material: &Box<RayTraceMaterial>) -> Option<RayTraceRayHit> {
 	if let Some((dist, vec1, vec2)) = compute_plane_hit(ray, center, vec[v1], vec[v2]) {
 		if dist <= 0.0 {
 			return None;

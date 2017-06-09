@@ -1,43 +1,39 @@
 use vecmath::Vector3;
 
-use std::cell::UnsafeCell;
-
 use anim::RayTraceAnim;
-use anim::RayTraceBoundAnimation;
-use anim::RayTraceSetRotation;
 
-pub struct RayTraceAnimBoundRotation<'a, T: 'a + RayTraceSetRotation> {
-	animation: Box<RayTraceAnim<Vector3<f64>> + Sync>,
-	object: UnsafeCell<&'a mut Box<T>>
+pub trait RayTraceBoundAnimation<'a>: Send + Sync {
+	fn next_frame(&'a mut self, frame: usize);
 }
 
-impl<'a, T: RayTraceSetRotation> RayTraceAnimBoundRotation<'a, T> {
-	pub fn new(animation: Box<RayTraceAnim<Vector3<f64>> + Sync>, object: &'a mut Box<T>)
+pub struct RayTraceAnimBoundPosition<'a, 'b: 'a> {
+	animation: Box<RayTraceAnim<'a, Vector3<f64>> + 'a>,
+	setter: Box<FnMut(Vector3<f64>) + Send + Sync +'b>
+}
+
+impl<'a, 'b: 'a> RayTraceAnimBoundPosition<'a, 'b> {
+	pub fn new(animation: Box<RayTraceAnim<'a, Vector3<f64>> + 'a>, setter: Box<FnMut(Vector3<f64>) + Send + Sync + 'b>)
 			-> Self {
 		Self {
 			animation: animation,
-			object: UnsafeCell::from(object)
+			setter: setter
 		}
 	}
 }
 
-impl<'a, T: RayTraceSetRotation> RayTraceBoundAnimation for RayTraceAnimBoundRotation<'a, T> {
-	fn next_frame(&self, frame: usize) where T: RayTraceSetRotation {
-		unsafe { // Hack to modify object while other borrow is held
-			let object: &'a mut Box<T> = *self.object.get();
-			object.set_rotation(self.animation.next_frame(frame));
-		}
+impl<'a, 'b: 'a> RayTraceBoundAnimation<'a> for RayTraceAnimBoundPosition<'a, 'b> {
+	fn next_frame(&'a mut self, frame: usize) {
+		(self.setter)(self.animation.next_frame(frame));
 	}
 }
 
-/*
-pub struct RayTraceAnimBoundPosition<'a> {
+/*pub struct RayTraceAnimBoundRotation {
 	animation: Box<RayTraceAnim<Vector3<f64>>>,
-	object: Box<&'a mut (RayTraceSetPosition + Sync)>
+	object: Box<RayTraceSetRotation + 'static>
 }
 
-impl<'a> RayTraceAnimBoundPosition<'a> {
-	pub fn new(animation: Box<RayTraceAnim<Vector3<f64>>>, object: Box<&'a mut (RayTraceSetPosition + Sync)>) -> Self {
+impl RayTraceAnimBoundRotation {
+	pub fn new(animation: Box<RayTraceAnim<Vector3<f64>>>, object: Box<RayTraceSetRotation + 'static>) -> Self {
 		Self {
 			animation: animation,
 			object: object
@@ -45,8 +41,8 @@ impl<'a> RayTraceAnimBoundPosition<'a> {
 	}
 }
 
-impl<'a> RayTraceBoundAnimation for RayTraceAnimBoundPosition<'a> {
+impl RayTraceBoundAnimation for RayTraceAnimBoundRotation {
 	fn next_frame(&mut self, frame: usize) {
-		self.object.set_position(self.animation.next_frame(frame));
+		self.object.set_rotation(self.animation.next_frame(frame));
 	}
 }*/

@@ -1,17 +1,23 @@
-use vecmath::Vector3;
+use anim::RayTraceBoundAnimation;
 
-pub trait RayTraceAnim<T> {
-	fn next_frame(&self, frame: usize) -> T;
+pub struct RayTraceAnimations<'a> {
+	anim: Vec<Box<RayTraceBoundAnimation<'a> + 'a>>
 }
 
-pub trait RayTraceBoundAnimation {
-	fn next_frame(&self, frame: usize);
-}
+impl<'a, 'b: 'a> RayTraceAnimations<'a> {
+	pub fn new() -> Self {
+		Self {
+			anim: Vec::new()
+		}
+	}
 
-pub trait RayTraceSetPosition {
-	fn set_position(&mut self, position: Vector3<f64>);
-}
+	pub fn apply(&mut self, frame: usize) {
+		for anim in self.anim.iter_mut() {
+			anim.next_frame(frame);
+		}
+	}
 
-pub trait RayTraceSetRotation {
-	fn set_rotation(&mut self, rotation: Vector3<f64>);
+	pub fn add_animation(&'a mut self, animation: Box<RayTraceBoundAnimation<'a> + Send + Sync + 'a>) {
+		self.anim.push(animation);
+	}
 }

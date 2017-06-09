@@ -2,7 +2,9 @@ use vecmath::Vector3;
 use vecmath::vec3_add;
 use vecmath::vec3_scale;
 
-use anim::RayTraceAnim;
+pub trait RayTraceAnim<'a, T>: Send + Sync {
+	fn next_frame(&'a self, frame: usize) -> T;
+}
 
 pub struct RayTraceAnimVec3Linear {
 	initial: Vector3<f64>,
@@ -18,8 +20,8 @@ impl RayTraceAnimVec3Linear {
 	}
 }
 
-impl RayTraceAnim<Vector3<f64>> for RayTraceAnimVec3Linear {
-	fn next_frame(&self, frame: usize) -> Vector3<f64> {
+impl<'a> RayTraceAnim<'a, Vector3<f64>> for RayTraceAnimVec3Linear {
+	fn next_frame(&'a self, frame: usize) -> Vector3<f64> {
 		vec3_add(self.initial, vec3_scale(self.delta, frame as f64))
 	}
 }
@@ -38,8 +40,8 @@ impl RayTraceAnimF64Linear {
 	}
 }
 
-impl RayTraceAnim<f64> for RayTraceAnimF64Linear {
-	fn next_frame(&self, frame: usize) -> f64 {
+impl<'a> RayTraceAnim<'a, f64> for RayTraceAnimF64Linear {
+	fn next_frame(&'a self, frame: usize) -> f64 {
 		self.initial + self.delta * (frame as f64)
 	}
 }
