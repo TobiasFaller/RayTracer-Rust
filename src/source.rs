@@ -1,7 +1,6 @@
 use std::sync::RwLock;
 use std::sync::RwLockWriteGuard;
 
-use anim::RayTraceAnimations;
 use camera::RayTraceCamera;
 use params::RayTraceOutputParams;
 use params::RayTraceParams;
@@ -11,8 +10,7 @@ pub struct RayTraceSourceSet {
 	pub scene: RayTraceScene,
 	pub camera: Box<RayTraceCamera>,
 	pub out_params: RayTraceOutputParams,
-	pub params: RayTraceParams,
-	pub animations: Option<RayTraceAnimations>
+	pub params: RayTraceParams
 
 }
 
@@ -28,8 +26,7 @@ impl RayTraceSource {
 				scene: scene,
 				camera: camera,
 				out_params: out_params,
-				params: params,
-				animations: None
+				params: params
 			})
 		}
 	}
@@ -48,10 +45,6 @@ impl RayTraceSource {
 
 	pub fn set_params(&mut self, params: RayTraceParams) {
 		self.objects.write().unwrap().params = params;
-	}
-
-	pub fn set_animations(&mut self, animations: RayTraceAnimations) {
-		self.objects.write().unwrap().animations = Some(animations);
 	}
 
 	pub fn get(&mut self) -> RwLockWriteGuard<RayTraceSourceSet> {

@@ -5,6 +5,7 @@ use vecmath::{vec3_add, vec3_sub, vec3_scale, vec3_neg};
 use vecmath::row_mat3_transform;
 
 use aabb::AABB;
+use anim::RayTraceAnimation;
 use hit::RayTraceRayHit;
 use material::RayTraceMaterial;
 use object::RayTraceObject;
@@ -24,6 +25,8 @@ pub struct RayTraceObjectCube {
 	size: Vector3<f64>,
 	center: Vector3<f64>,
 	rotation: Vector3<f64>,
+	anim_pos: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
+	anim_rot: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
 	data: Option<WorkingData>
 }
 
@@ -35,6 +38,8 @@ impl RayTraceObjectCube {
 			center: center,
 			size: size,
 			rotation: [0.0, 0.0, 0.0],
+			anim_rot: None,
+			anim_pos: None,
 			data: None
 		}
 	}
@@ -45,6 +50,8 @@ impl RayTraceObjectCube {
 			center: center,
 			size: size,
 			rotation: [0.0, 0.0, 0.0],
+			anim_rot: None,
+			anim_pos: None,
 			data: None
 		}
 	}
@@ -57,6 +64,22 @@ impl RayTraceObjectCube {
 	pub fn set_position(&mut self, position: Vector3<f64>) {
 		self.center = position;
 		self.data = None;
+	}
+
+	pub fn set_anim_pos_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
+		self.anim_pos = anim;
+	}
+
+	pub fn set_anim_pos(&mut self, anim: Box<RayTraceAnimation<Vector3<f64>>>) {
+		self.anim_pos = Some(anim);
+	}
+
+	pub fn set_anim_rot_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
+		self.anim_rot = anim;
+	}
+
+	pub fn set_anim_rot(&mut self, anim: Box<RayTraceAnimation<Vector3<f64>>>) {
+		self.anim_rot = Some(anim);
 	}
 
 	fn get_material(&self, index: usize) -> &Box<RayTraceMaterial> {
@@ -93,6 +116,13 @@ struct WorkingData {
 #[allow(unused_variables)]
 impl RayTraceObject for RayTraceObjectCube {
 	fn init(&mut self, frame: usize) {
+		if let Some(ref anim_pos) = self.anim_pos {
+			self.center = anim_pos.next_frame(frame);
+		}
+		if let Some(ref anim_rot) = self.anim_rot {
+			self.rotation = anim_rot.next_frame(frame);
+		}
+
 		let plane_vec1 = [1.0, 0.0, 0.0];
 		let plane_vec2 = [0.0, 1.0, 0.0];
 		let plane_vec3 = [0.0, 0.0, 1.0];
