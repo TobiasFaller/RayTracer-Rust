@@ -70,12 +70,12 @@ impl RayTraceObjectCube {
 		}
 	}
 
-	pub fn get_anim_position<'a>(&'a mut self) -> Box<FnMut(Vector3<f64>) + Send + Sync + 'a> {
-		Box::new(move |vec| self.set_position(vec))
+	pub fn get_anim_position(&self) -> Box<Fn(&mut Box<Self>, Vector3<f64>) + Send + Sync> {
+		Box::new(move |obj, vec| obj.set_position(vec))
 	}
 
-	pub fn get_anim_rotation<'a>(&'a mut self) -> Box<FnMut(Vector3<f64>) + Send + Sync + 'a> {
-		Box::new(move |vec| self.set_rotation(vec))
+	pub fn get_anim_rotation(&self) -> Box<Fn(&mut Box<Self>, Vector3<f64>) + Send + Sync> {
+		Box::new(move |obj, vec| obj.set_rotation(vec))
 	}
 }
 

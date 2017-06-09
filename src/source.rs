@@ -1,34 +1,60 @@
+use std::sync::RwLock;
+use std::sync::RwLockWriteGuard;
+
 use anim::RayTraceAnimations;
 use camera::RayTraceCamera;
 use params::RayTraceOutputParams;
 use params::RayTraceParams;
 use scene::RayTraceScene;
 
-#[allow(dead_code)]
-pub struct RayTraceSource<'a> {
-	scene: &'a mut RayTraceScene,
-	camera: &'a mut Box<RayTraceCamera>,
-	out_params: &'a RayTraceOutputParams,
-	params: &'a RayTraceParams,
-	animations: Option<&'a mut RayTraceAnimations<'a>>
+pub struct RayTraceSourceSet {
+	pub scene: RayTraceScene,
+	pub camera: Box<RayTraceCamera>,
+	pub out_params: RayTraceOutputParams,
+	pub params: RayTraceParams,
+	pub animations: Option<RayTraceAnimations>
+
 }
 
-#[allow(dead_code)]
-impl<'a: 'b, 'b> RayTraceSource<'a> {
-	pub fn new(scene: &'a mut RayTraceScene, camera: &'a mut Box<RayTraceCamera>, out_params: &'a RayTraceOutputParams,
-			params: &'a RayTraceParams, animations: &'a mut RayTraceAnimations<'a>) -> Self {
+pub struct RayTraceSource {
+	objects: RwLock<RayTraceSourceSet>
+}
+
+impl RayTraceSource {
+	pub fn new(scene: RayTraceScene, camera: Box<RayTraceCamera>, out_params: RayTraceOutputParams,
+			params: RayTraceParams) -> Self {
 		Self {
-			scene: scene,
-			camera: camera,
-			out_params: out_params,
-			params: params,
-			animations: Some(animations)
+			objects: RwLock::new(RayTraceSourceSet {
+				scene: scene,
+				camera: camera,
+				out_params: out_params,
+				params: params,
+				animations: None
+			})
 		}
 	}
 
-	pub fn get(&'b mut self)
-			-> (&mut RayTraceScene, &mut Box<RayTraceCamera>, &RayTraceParams, &RayTraceOutputParams,
-				&mut Option<&'a mut RayTraceAnimations<'a>>) {
-		(self.scene, self.camera, self.params, self.out_params, &mut self.animations)
+	pub fn set_scene(&mut self, scene: RayTraceScene) {
+		self.objects.write().unwrap().scene = scene;
+	}
+
+	pub fn set_camera(&mut self, camera: Box<RayTraceCamera>) {
+		self.objects.write().unwrap().camera = camera;
+	}
+
+	pub fn set_out_params(&mut self, out_params: RayTraceOutputParams) {
+		self.objects.write().unwrap().out_params = out_params;
+	}
+
+	pub fn set_params(&mut self, params: RayTraceParams) {
+		self.objects.write().unwrap().params = params;
+	}
+
+	pub fn set_animations(&mut self, animations: RayTraceAnimations) {
+		self.objects.write().unwrap().animations = Some(animations);
+	}
+
+	pub fn get(&mut self) -> RwLockWriteGuard<RayTraceSourceSet> {
+		self.objects.write().unwrap()
 	}
 }

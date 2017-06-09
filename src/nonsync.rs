@@ -88,3 +88,11 @@ impl<T> DerefMut for UnsafeRef<T> {
 }
 
 unsafe impl<T> Sync for UnsafeRef<T> { }
+
+impl<T> Clone for UnsafeRef<T> {
+	fn clone(&self) -> Self {
+		Self {
+			value: self.value
+		}
+	}
+}

@@ -16,6 +16,7 @@ use ray::RayTraceRay;
 use sink::RayTraceSink;
 use scene::RayTraceScene;
 use source::RayTraceSource;
+use source::RayTraceSourceSet;
 
 pub struct RayTracer { }
 
@@ -25,10 +26,19 @@ impl RayTracer {
 		Self { }
 	}
 
-	pub fn render<'a>(&mut self, source: &'a mut RayTraceSource, sink: &'a mut Box<RayTraceSink>) -> Result<(), IOError> {
-		let (mut scene, mut camera, params, out_params, animations) = source.get();
+	pub fn render(&mut self, source: &mut RayTraceSource, sink: &mut Box<RayTraceSink>) -> Result<(), IOError> {
+		let mut w_guard = source.get();
+		let RayTraceSourceSet {ref mut scene, ref mut camera, ref params, ref out_params, ref mut animations}
+			= *w_guard;
 
 		try!(sink.init(out_params.get_width(), out_params.get_height(), out_params.get_frames()));
+
+	match animations {
+		&mut Some(ref mut anim) => {
+			anim.init();
+		}
+		&mut None => {}
+	};
 
 		let arc_params = Arc::new(params);
 		let arc_sink = Arc::new(Mutex::new(sink));
@@ -44,7 +54,7 @@ impl RayTracer {
 
 			match animations {
 				&mut Some(ref mut anim) => {
-				
+					anim.frame(frame);
 				}
 				&mut None => {}
 			};
