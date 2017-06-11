@@ -1,6 +1,8 @@
 mod simple;
+mod test;
 
 pub use self::simple::RayTraceSimpleMaterial;
+pub use self::test::RayTraceCheckerboardMaterial;
 
 use hit::RayTraceMaterialHit;
 

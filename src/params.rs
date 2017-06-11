@@ -58,7 +58,7 @@ impl RayTraceParams {
 			max_depth: 3,
 			background_color: RayTraceColor::transparent(),
 			indirect_color: RayTraceColor::white(),
-			ambient_light: RayTraceColor::new_with(1.0, 1.0, 1.0, 0.4),
+			ambient_light: RayTraceColor::white(),
 			shading: Some(box RayTracePhongShading::new())
 		}
 	}

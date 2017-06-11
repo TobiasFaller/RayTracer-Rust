@@ -40,7 +40,7 @@ impl RayTraceShading for RayTracePhongShading {
 		// Diffuse part only dependent on camera position
 		let diffuse = -vec3_dot(surface_normal.clone(), ray_direction.clone()) as f32;
 
-		let light_ray_start = ray.get_position_on_ray(hit_distance - 1e-3);
+		let light_ray_start = ray.get_position_on_ray(hit_distance - 1e-10);
 		let mut specular = RayTraceColor::new_with(0.0, 0.0, 0.0, 0.0);
 		let mut specular_lights = 0;
 		for light in scene.get_spot_lights() {
@@ -56,12 +56,9 @@ impl RayTraceShading for RayTracePhongShading {
 					if !aabb.is_hit(&light_ray) {
 						continue;
 					}
+				}
 
-					if let Some(_) = object.next_hit(&light_ray) {
-						light_ray_intersected = true;
-						break;
-					}
-				} else if let Some(_) = object.next_hit(&light_ray) {
+				if let Some(_) = object.next_hit(&light_ray) {
 					light_ray_intersected = true;
 					break;
 				}

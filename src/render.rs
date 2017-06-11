@@ -113,13 +113,11 @@ fn compute_color_for_ray(ray: &RayTraceRay, scene: &RayTraceScene, params: &RayT
 	for object in scene.get_objects().iter() {
 		if let Some(aabb) = object.get_aabb() {
 			if !aabb.is_hit(ray) {
-				return params.get_background_color().clone();
+				continue;
 			}
+		}
 
-			if let Some(hit) = object.next_hit(ray) {
-				ray_hits.push(hit);
-			}
-		} else if let Some(hit) = object.next_hit(ray) {
+		if let Some(hit) = object.next_hit(ray) {
 			ray_hits.push(hit);
 		}
 	}
