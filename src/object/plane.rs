@@ -79,6 +79,10 @@ impl RayTraceObject for RayTraceObjectPlane {
 
 			if let Some((dist, vec1, vec2)) = compute_plane_hit(ray, self.center, data.plane_vec[0],
 					data.plane_vec[1]) {
+				if dist <= 0.0 {
+					return None;
+				}
+
 				return Some(RayTraceRayHit::new(dist, ray.get_position_on_ray(dist), data.plane_normal,
 						self.material.get_hit(vec1, vec2)));
 			} else {
