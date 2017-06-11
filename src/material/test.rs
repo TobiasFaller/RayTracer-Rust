@@ -38,6 +38,6 @@ impl RayTraceMaterial for RayTraceCheckerboardMaterial {
 		let x_scaled = (x / self.scale[0]) as i64 + (if x >= 0.0 {0} else {1});
 		let y_scaled = (y / self.scale[1]) as i64 + (if y >= 0.0 {0} else {1});
 
-		RayTraceMaterialHit::with_color(self.colors[(x_scaled + y_scaled) as usize & 0x01].clone())
+		RayTraceMaterialHit::with(self.colors[(x_scaled + y_scaled) as usize & 0x01].clone(), 0.25)
 	}
 }

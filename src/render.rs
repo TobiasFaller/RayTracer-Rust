@@ -8,8 +8,14 @@ use time::now;
 
 use scoped_threadpool::Pool;
 
+use vecmath::Vector3;
+use vecmath::vec3_scale;
+use vecmath::vec3_sub;
+use vecmath::vec3_dot;
+
 use camera::RayTraceCamera;
 use color::RayTraceColor;
+use color::mix_color;
 use hit::RayTraceRayHit;
 use params::RayTraceParams;
 use ray::RayTraceRay;
@@ -124,7 +130,11 @@ fn compute_color_for_ray(ray: &RayTraceRay, scene: &RayTraceScene, params: &RayT
 
 	// Return background color on no hit
 	if ray_hits.is_empty() {
-		return params.get_background_color().clone();
+		if depth == 0 {
+			return params.get_background_color().clone();
+		} else {
+			return params.get_indirect_color().clone();
+		}
 	}
 
 	ray_hits.sort_by(|a, b| {
@@ -139,9 +149,26 @@ fn compute_color_for_ray(ray: &RayTraceRay, scene: &RayTraceScene, params: &RayT
 	});
 
 	let hit = ray_hits.remove(0);
+	let material_color;
+
 	if let &Some(ref shading_fn) = params.get_shading() {
-		return shading_fn.apply(ray, &hit, scene, params);
+		material_color = shading_fn.apply(ray, &hit, scene, params);
 	} else {
-		return hit.get_surface_material().get_color().clone();
+		material_color = hit.get_surface_material().get_color().clone();
 	}
+
+	let reflectance = hit.get_surface_material().get_reflectance();
+	if reflectance != 0.0 {
+		let reflected_ray = compute_reflected_ray(hit.get_surface_normal().clone(), ray, hit.get_distance());
+		let reflected_color = compute_color_for_ray(&reflected_ray, scene, params, depth + 1);
+		return mix_color(&material_color, &reflected_color, reflectance);
+	}
+
+	return material_color;
+}
+
+fn compute_reflected_ray(n: Vector3<f64>, ray: &RayTraceRay, distance: f64) -> RayTraceRay {
+	let d = ray.get_direction().clone();
+	let r = vec3_sub(d, vec3_scale(n, 2.0 * vec3_dot(d, n)));
+	return RayTraceRay::new(ray.get_position_on_ray(distance - 1e-10), r);
 }
