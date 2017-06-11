@@ -1,7 +1,7 @@
+use std::fs;
+use std::io::BufWriter;
 use std::io::Error;
 use std::path::Path;
-use std::fs::File;
-use std::io::BufWriter;
 
 use color::RayTraceColor;
 
@@ -66,7 +66,11 @@ impl RayTraceSink for PngSink {
 
 		let file_name = format!("{}{:04}.png", name, frame);
 		let path = Path::new(&file_name);
-		let file = try!(File::create(path));
+		if let Some(parent) = path.parent() {
+			try!(fs::create_dir_all(parent));
+		}
+
+		let file = try!(fs::File::create(path));
 		let mut buf_writer = BufWriter::new(file);
 		let encoder = PNGEncoder::new(&mut buf_writer);
 		
