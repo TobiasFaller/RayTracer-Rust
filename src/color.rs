@@ -126,6 +126,28 @@ impl RayTraceColor {
 			}
 		}
 	}
+
+	pub fn clamp(&mut self) {
+		self.r = clamp_value(self.r);
+		self.g = clamp_value(self.g);
+		self.b = clamp_value(self.b);
+		self.a = clamp_value(self.a);
+	}
+
+	pub fn get_clamped(&self) -> Self {
+		Self {
+			r: clamp_value(self.r),
+			g: clamp_value(self.g),
+			b: clamp_value(self.b),
+			a: clamp_value(self.a)
+		}
+	}
+}
+
+fn clamp_value(value: f32) -> f32 {
+	if value <= 0.0 { return 0.0; }
+	if value >= 1.0 { return 1.0; }
+	value
 }
 
 impl Add for RayTraceColor {

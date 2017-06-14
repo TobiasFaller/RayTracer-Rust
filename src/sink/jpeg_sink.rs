@@ -19,8 +19,8 @@ pub struct JpegSink {
 
 #[allow(dead_code)]
 impl JpegSink {
-	pub fn new(file_name: String) -> JpegSink {
-		JpegSink {
+	pub fn new(file_name: String) -> Self {
+		Self {
 			width: 0,
 			height: 0,
 			file_name: file_name,

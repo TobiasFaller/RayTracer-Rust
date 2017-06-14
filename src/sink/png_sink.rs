@@ -19,8 +19,8 @@ pub struct PngSink {
 
 #[allow(dead_code)]
 impl PngSink {
-	pub fn new(file_name: String) -> PngSink {
-		PngSink {
+	pub fn new(file_name: String) -> Self {
+		Self {
 			width: 0,
 			height: 0,
 			file_name: file_name,
@@ -76,7 +76,7 @@ impl RayTraceSink for PngSink {
 		
 		let box ref buf = self.buffer;
 		try!(encoder.encode(buf, self.width as u32, self.height as u32, ColorType::RGBA(8)));
-		
+
 		Ok(())
 	}
 }
