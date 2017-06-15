@@ -1,3 +1,5 @@
+use std::f64;
+
 use vecmath::*;
 use math_util::*;
 
@@ -75,6 +77,14 @@ impl RayTraceCamera for RayTracerCameraOrthographic {
 			return RayTraceRay::new(vec3_add(self.position, offset), data.normal_vec);
 		} else {
 			panic!("Camera was not initialized!");
+		}
+	}
+
+	fn get_direction(&self) -> Vector3<f64> {
+		if let Some(ref data) = self.data {
+			data.normal_vec
+		} else {
+			[0.0, 0.0, 0.0]
 		}
 	}
 }

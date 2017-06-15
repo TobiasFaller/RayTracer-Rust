@@ -8,11 +8,6 @@ use time::now;
 
 use scoped_threadpool::Pool;
 
-use vecmath::Vector3;
-use vecmath::vec3_scale;
-use vecmath::vec3_sub;
-use vecmath::vec3_dot;
-
 use camera::RayTraceCamera;
 use color::RayTraceColor;
 use color::mix_color;
@@ -23,6 +18,7 @@ use sink::RayTraceSink;
 use scene::RayTraceScene;
 use source::RayTraceSource;
 use source::RayTraceSourceSet;
+use math_util::compute_reflected_ray;
 
 pub struct RayTracer { }
 
@@ -83,11 +79,10 @@ impl RayTracer {
 
 fn compute_color(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>, params: Arc<&RayTraceParams>,
 		x: usize, y: usize) -> RayTraceColor {
-	debug!("Rendering pixel {}, {}:", x, y);
 	match params.get_jitter() {
 		&None => {
 			let ray = camera.make_ray(x as f64 + 0.5_f64, y as f64 + 0.5_f64);
-			return compute_color_for_ray(&ray, *scene, *params, 0);
+			return compute_color_for_ray(&ray, *camera, *scene, *params, 0);
 		},
 		&Some(ref jitter) => {
 			let ray_count = jitter.get_ray_count();
@@ -96,7 +91,7 @@ fn compute_color(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>, 
 			for _ in 0..ray_count {
 				let (jx, jy) = jitter.apply(x as f64, y as f64);
 				let ray = camera.make_ray(jx, jy);
-				let ray_color = compute_color_for_ray(&ray, *scene, *params, 0);
+				let ray_color = compute_color_for_ray(&ray, *camera, *scene, *params, 0);
 
 				color += ray_color / (ray_count as f32);
 			}
@@ -106,8 +101,8 @@ fn compute_color(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>, 
 	}
 }
 
-fn compute_color_for_ray(ray: &RayTraceRay, scene: &RayTraceScene, params: &RayTraceParams, depth: usize)
-		-> RayTraceColor {
+fn compute_color_for_ray(ray: &RayTraceRay, camera: &Box<RayTraceCamera>, scene: &RayTraceScene,
+		params: &RayTraceParams, depth: usize) -> RayTraceColor {
 	// If this is an indirect ray we cancel after a maximum depth
 	if depth > params.get_max_depth() {
 		return params.get_indirect_color().clone();
@@ -152,7 +147,7 @@ fn compute_color_for_ray(ray: &RayTraceRay, scene: &RayTraceScene, params: &RayT
 	let material_color;
 
 	if let &Some(ref shading_fn) = params.get_shading() {
-		material_color = shading_fn.apply(ray, &hit, scene, params);
+		material_color = shading_fn.apply(ray, &hit, camera, scene, params);
 	} else {
 		material_color = hit.get_surface_material().get_color().clone();
 	}
@@ -160,15 +155,9 @@ fn compute_color_for_ray(ray: &RayTraceRay, scene: &RayTraceScene, params: &RayT
 	let reflectance = hit.get_surface_material().get_reflectance();
 	if reflectance != 0.0 {
 		let reflected_ray = compute_reflected_ray(hit.get_surface_normal().clone(), ray, hit.get_distance());
-		let reflected_color = compute_color_for_ray(&reflected_ray, scene, params, depth + 1);
+		let reflected_color = compute_color_for_ray(&reflected_ray, camera, scene, params, depth + 1);
 		return mix_color(&material_color, &reflected_color, reflectance);
 	}
 
 	return material_color;
-}
-
-fn compute_reflected_ray(n: Vector3<f64>, ray: &RayTraceRay, distance: f64) -> RayTraceRay {
-	let d = ray.get_direction().clone();
-	let r = vec3_sub(d, vec3_scale(n, 2.0 * vec3_dot(d, n)));
-	return RayTraceRay::new(ray.get_position_on_ray(distance - 1e-10), r);
 }

@@ -62,21 +62,22 @@ impl<'a> RayTraceSink for Y4mSink<'a, BufWriter<fs::File>> {
 
 		let writer: *mut BufWriter<fs::File>  = &mut self.writer;
 		unsafe {
-		match EncoderBuilder::new(width, height, self.frame_rate).with_colorspace(Colorspace::C444)
-				.write_header(&mut *writer) {
-			Ok(e) => {
-				let y = vec![0_u8; width * height];
-				let u = vec![0_u8; width * height];
-				let v = vec![0_u8; width * height];
-				self.frame_data = Some((y, u, v));
-				self.encoder = Some(e);
-				Ok(())
-			},
-			Err(e) => {
-				println!("Err");
-				Err(y4m_error_convert(e))
+			match EncoderBuilder::new(width, height, self.frame_rate).with_colorspace(Colorspace::C444)
+					.write_header(&mut *writer) {
+				Ok(e) => {
+					let y = vec![0_u8; width * height];
+					let u = vec![0_u8; width * height];
+					let v = vec![0_u8; width * height];
+					self.frame_data = Some((y, u, v));
+					self.encoder = Some(e);
+					Ok(())
+				},
+				Err(e) => {
+					println!("Err");
+					Err(y4m_error_convert(e))
+				}
 			}
-		}}
+		}
 	}
 
 	fn start_frame(&mut self, frame: usize) -> Result<(), IOError> {
@@ -86,13 +87,13 @@ impl<'a> RayTraceSink for Y4mSink<'a, BufWriter<fs::File>> {
 	fn set_sample(&mut self, x: usize, y: usize, color: &RayTraceColor) -> Result<(), IOError> {
 		let offset = x + y * self.width;
 		let clamped_color = color.get_clamped();
-		let (y, u, v) = color_to_ycbcr(&clamped_color);
+		let (y, u, v) = color_to_yuv(&clamped_color);
 
 		if let Some(ref mut frame_data) = self.frame_data {
 			let &mut (ref mut vec_y, ref mut vec_u, ref mut vec_v) = frame_data;
 			vec_y[offset] = clamp_color_u8(y);
-			vec_u[offset] = clamp_color_u8(v);
-			vec_v[offset] = clamp_color_u8(u);
+			vec_u[offset] = clamp_color_u8(u);
+			vec_v[offset] = clamp_color_u8(v);
 		}
 
 		Ok(())
@@ -117,6 +118,14 @@ impl<'a> RayTraceSink for Y4mSink<'a, BufWriter<fs::File>> {
 		} else {
 			Err(IOError::new(ErrorKind::Other, "Could not get frame data!"))
 		}
+	}
+}
+
+impl<'a, W: Write + 'a> Drop for Y4mSink<'a, W> {
+	fn drop(&mut self) {
+		self.encoder = None; // Close the encoder
+		self.writer.flush().unwrap(); // Finish the data stream
+		self.frame_data = None; // Destroy the frame buffer
 	}
 }
 
@@ -152,7 +161,7 @@ fn color_to_yuv(color: &RayTraceColor) -> (f32, f32, f32) {
 	(y, u, v)
 }
 
-fn color_to_ycbcr(color: &RayTraceColor) -> (f32, f32, f32) {
+/*fn color_to_ycbcr(color: &RayTraceColor) -> (f32, f32, f32) {
 	let (r, g, b, _) = color.get();
 
 	let y = 0.2988390 * r + 0.5868110 * g + 0.1143500 * b;
@@ -160,4 +169,4 @@ fn color_to_ycbcr(color: &RayTraceColor) -> (f32, f32, f32) {
 	let cr = 0.500000 * r - 0.418688 * g  - 0.081312 * b + 0.5;
 
 	(y, cb, cr)
-}
+}*/

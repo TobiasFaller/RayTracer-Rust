@@ -3,7 +3,6 @@ use rand::{Rng, thread_rng};
 use color::RayTraceColor;
 
 use light::RayTraceShading;
-use light::RayTracePhongShading;
 
 pub trait RayTraceJitter {
 	fn apply(&self, x: f64, y: f64) -> (f64, f64);
@@ -59,7 +58,7 @@ impl RayTraceParams {
 			background_color: RayTraceColor::transparent(),
 			indirect_color: RayTraceColor::white(),
 			ambient_light: RayTraceColor::white(),
-			shading: Some(box RayTracePhongShading::new())
+			shading: None
 		}
 	}
 

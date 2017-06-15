@@ -5,24 +5,18 @@ pub struct RayTraceMaterialHit {
 	color: RayTraceColor,
 	diffuse_light: f32,
 	specular_light: f32,
+	surface_roughness: f32,
 	reflectance: f32
 }
 
 impl<'a> RayTraceMaterialHit {
-	pub fn with_color(color: RayTraceColor) -> Self {
+	pub fn new_with(color: RayTraceColor, reflectance: f32, diffuse_light: f32, specular_light: f32,
+			surface_roughness: f32) -> Self {
 		Self {
 			color: color,
-			diffuse_light: 0.8,
-			specular_light: 12.0,
-			reflectance: 0.0
-		}
-	}
-
-	pub fn with(color: RayTraceColor, reflectance: f32) -> Self {
-		Self {
-			color: color,
-			diffuse_light: 0.8,
-			specular_light: 12.0,
+			diffuse_light: diffuse_light,
+			specular_light: specular_light,
+			surface_roughness: surface_roughness,
 			reflectance: reflectance
 		}
 	}
@@ -49,6 +43,14 @@ impl<'a> RayTraceMaterialHit {
 
 	pub fn set_specular_light(&mut self, specular_light: f32) {
 		self.specular_light = specular_light;
+	}
+
+	pub fn get_surface_roughness(&self) -> f32 {
+		self.surface_roughness
+	}
+
+	pub fn set_surface_roughness(&mut self, surface_roughness: f32) {
+		self.surface_roughness = surface_roughness;
 	}
 
 	pub fn get_reflectance(&self) -> f32 {

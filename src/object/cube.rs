@@ -92,14 +92,6 @@ impl RayTraceObjectCube {
 			}
 		}
 	}
-
-	pub fn get_anim_position(&self) -> Box<Fn(&mut Box<Self>, Vector3<f64>) + Send + Sync> {
-		Box::new(move |obj, vec| obj.set_position(vec))
-	}
-
-	pub fn get_anim_rotation(&self) -> Box<Fn(&mut Box<Self>, Vector3<f64>) + Send + Sync> {
-		Box::new(move |obj, vec| obj.set_rotation(vec))
-	}
 }
 
 fn gen_aabb(center: Vector3<f64>, size: Vector3<f64>) -> AABB {

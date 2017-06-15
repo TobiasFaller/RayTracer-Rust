@@ -3,6 +3,7 @@ use vecmath::vec3_dot;
 use vecmath::Vector3;
 
 use aabb::AABB;
+use anim::RayTraceAnimation;
 use hit::RayTraceRayHit;
 use material::RayTraceMaterial;
 use object::RayTraceObject;
@@ -16,6 +17,8 @@ pub struct RayTraceObjectPlane {
 	center: Vector3<f64>,
 	rotation: Vector3<f64>,
 	material: Box<RayTraceMaterial>,
+	anim_pos: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
+	anim_rot: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
 	data: Option<WorkingData>
 }
 
@@ -26,6 +29,8 @@ impl RayTraceObjectPlane {
 			center: center,
 			rotation: rotation,
 			material: material,
+			anim_rot: None,
+			anim_pos: None,
 			data: None
 		}
 	}
@@ -39,6 +44,22 @@ impl RayTraceObjectPlane {
 		self.center = position;
 		self.data = None;
 	}
+
+	pub fn set_anim_pos_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
+		self.anim_pos = anim;
+	}
+
+	pub fn set_anim_pos(&mut self, anim: Box<RayTraceAnimation<Vector3<f64>>>) {
+		self.anim_pos = Some(anim);
+	}
+
+	pub fn set_anim_rot_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
+		self.anim_rot = anim;
+	}
+
+	pub fn set_anim_rot(&mut self, anim: Box<RayTraceAnimation<Vector3<f64>>>) {
+		self.anim_rot = Some(anim);
+	}
 }
 
 struct WorkingData {
@@ -51,6 +72,13 @@ const THRESHOLD: f64 = 1e-10;
 #[allow(unused_variables)]
 impl RayTraceObject for RayTraceObjectPlane {
 	fn init(&mut self, frame: usize) {
+		if let Some(ref anim_pos) = self.anim_pos {
+			self.center = anim_pos.next_frame(frame);
+		}
+		if let Some(ref anim_rot) = self.anim_rot {
+			self.rotation = anim_rot.next_frame(frame);
+		}
+
 		let plane_vec1 = [1.0, 0.0, 0.0];
 		let plane_vec2 = [0.0, 1.0, 0.0];
 		let plane_vec3 = [0.0, 0.0, 1.0];

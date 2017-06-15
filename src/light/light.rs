@@ -1,5 +1,6 @@
 use vecmath::Vector3;
 
+use camera::RayTraceCamera;
 use color::RayTraceColor;
 use hit::RayTraceRayHit;
 use params::RayTraceParams;
@@ -7,8 +8,8 @@ use ray::RayTraceRay;
 use scene::RayTraceScene;
 
 pub trait RayTraceShading {
-	fn apply(&self, ray: &RayTraceRay, ray_hit: &RayTraceRayHit, scene: &RayTraceScene, params: &RayTraceParams)
-		-> RayTraceColor;
+	fn apply(&self, ray: &RayTraceRay, ray_hit: &RayTraceRayHit, camera: &Box<RayTraceCamera>, scene: &RayTraceScene,
+		params: &RayTraceParams) -> RayTraceColor;
 }
 
 pub struct RayTraceSpotLight {

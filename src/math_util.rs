@@ -1,4 +1,6 @@
-use vecmath::{Matrix3, Vector3, mat3_id, row_mat3_mul};
+use vecmath::{Matrix3, Vector3};
+use vecmath::{vec3_sub, vec3_scale, vec3_dot};
+use vecmath::{mat3_id, row_mat3_mul};
 use vecmath::{vec4_sub, vec4_scale};
 
 use ray::RayTraceRay;
@@ -112,4 +114,10 @@ pub fn compute_plane_hit(ray: &RayTraceRay, center: Vector3<f64>, vec1: Vector3<
 	mat[1] = vec4_sub(mat[1], vec4_scale(mat[2], mat[1][2] / mat[2][2]));
 
 	return Some((mat[0][3] / mat[0][0], mat[1][3] / mat[1][1], mat[2][3] / mat[2][2]));
+}
+
+pub fn compute_reflected_ray(n: Vector3<f64>, ray: &RayTraceRay, distance: f64) -> RayTraceRay {
+	let d = ray.get_direction().clone();
+	let r = vec3_sub(d, vec3_scale(n, 2.0 * vec3_dot(d, n)));
+	return RayTraceRay::new(ray.get_position_on_ray(distance - 1e-10), r);
 }

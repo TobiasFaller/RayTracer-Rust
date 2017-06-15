@@ -13,8 +13,6 @@ pub struct AABB {
 #[allow(dead_code)]
 impl AABB {
 	pub fn new(x1: Vector3<f64>, x2: Vector3<f64>) -> Self {
-		info!("AABB: {}, {}, {} to {}, {}, {}", x1[0], x1[1], x1[2], x2[0], x2[1], x2[2]);
-
 		Self {
 			start: [x1[0].min(x2[0]), x1[1].min(x2[1]), x1[2].min(x2[2])],
 			end: [x1[0].max(x2[0]), x1[1].max(x2[1]), x1[2].max(x2[2])],
@@ -23,13 +21,8 @@ impl AABB {
 
 	pub fn is_hit(&self, ray: &RayTraceRay) -> bool {
 		let [x, y, z] = *ray.get_position();
-		let [dx, dy, dz] = *ray.get_direction();
 		let (x_start, x_end, y_start, y_end, z_start, z_end) = project_points_onto_ray(ray, (self.start, self.end));
 		let (mut check_xy, mut check_xz, mut check_yz) = (true, true, true);
-
-		debug!("ray: {},{},{} -> {}, {}, {}", x, y, z, dx, dy, dz);
-		debug!("bb: {}, {}, {} - {}, {}, {}", self.start[0], self.start[1], self.start[2], self.end[0], self.end[1], self.end[2]);
-		debug!("x: {}-{}, y: {}-{}, z: {}-{}", x_start, x_end, y_start, y_end, z_start, z_end);
 
 		if x_start.is_nan() {
 			if x < self.start[0] || x > self.end[0] {

@@ -29,3 +29,4 @@ pub mod render;
 pub mod sink;
 pub mod scene;
 pub mod source;
+pub mod util;
