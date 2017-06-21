@@ -185,6 +185,15 @@ impl AddAssign for RayTraceColor {
 	}
 }
 
+impl<'a> AddAssign<&'a RayTraceColor> for RayTraceColor {
+	fn add_assign(&mut self, rhs: &'a RayTraceColor) {
+		self.r += rhs.r;
+		self.g += rhs.g;
+		self.b += rhs.b;
+		self.a += rhs.a;
+	}
+}
+
 impl Sub for RayTraceColor {
 	type Output = RayTraceColor;
 
@@ -213,6 +222,15 @@ impl<'a> Sub for &'a RayTraceColor {
 
 impl SubAssign for RayTraceColor {
 	fn sub_assign(&mut self, rhs: RayTraceColor) {
+		self.r -= rhs.r;
+		self.g -= rhs.g;
+		self.b -= rhs.b;
+		self.a -= rhs.a;
+	}
+}
+
+impl<'a> SubAssign<&'a RayTraceColor> for RayTraceColor {
+	fn sub_assign(&mut self, rhs: &'a RayTraceColor) {
 		self.r -= rhs.r;
 		self.g -= rhs.g;
 		self.b -= rhs.b;

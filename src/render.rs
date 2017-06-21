@@ -1,8 +1,7 @@
 use std::cmp::Ordering;
 use std::f64;
-use std::f32;
 use std::io::Error as IOError;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 
 use time::now;
 
@@ -14,6 +13,8 @@ use color::mix_color;
 use hit::RayTraceRayHit;
 use params::RayTraceParams;
 use ray::RayTraceRay;
+use sample::RayTraceSample;
+use sample::RayTraceSampleAccumulator;
 use sink::RayTraceSink;
 use scene::RayTraceScene;
 use source::RayTraceSource;
@@ -22,7 +23,6 @@ use math_util::compute_reflected_ray;
 
 pub struct RayTracer { }
 
-#[allow(unused_variables)]
 impl RayTracer {
 	pub fn new() -> Self {
 		Self { }
@@ -30,12 +30,13 @@ impl RayTracer {
 
 	pub fn render(&mut self, source: &mut RayTraceSource, sink: &mut Box<RayTraceSink>) -> Result<(), IOError> {
 		let mut w_guard = source.get();
-		let RayTraceSourceSet {ref mut scene, ref mut camera, ref params, ref out_params} = *w_guard;
+		let RayTraceSourceSet {ref mut scene, ref mut camera, ref mut params, ref out_params} = *w_guard;
+		let mut arc_acc = Arc::new(RayTraceSampleAccumulator::new(params.unwrap_filter()));
 
 		try!(sink.init(out_params.get_width(), out_params.get_height(), out_params.get_frames()));
+		Arc::get_mut(&mut arc_acc).unwrap().init(out_params.get_width(), out_params.get_height());
 
-		let arc_params = Arc::new(params);
-		let arc_sink = Arc::new(Mutex::new(sink));
+		let mut arc_params: Arc<&mut RayTraceParams> = Arc::new(params);
 		let mut arc_camera: Arc<&mut Box<RayTraceCamera>> = Arc::new(camera);
 		let mut arc_scene: Arc<&mut RayTraceScene> = Arc::new(scene);
 
@@ -43,8 +44,6 @@ impl RayTracer {
 
 		for frame in 0..out_params.get_frames() {
 			let start = now();
-
-			try!(arc_sink.lock().unwrap().start_frame(frame));
 
 			Arc::get_mut(&mut arc_camera).unwrap().init(frame);
 			Arc::get_mut(&mut arc_scene).unwrap().init(frame);
@@ -54,49 +53,50 @@ impl RayTracer {
 					for x in 0..out_params.get_width() {
 						let scoped_camera: Arc<&Box<RayTraceCamera>> = Arc::new(&arc_camera);
 						let scoped_scene: Arc<&RayTraceScene> = Arc::new(&arc_scene);
-						let scoped_params = arc_params.clone();
-						let scoped_sink = arc_sink.clone();
+						let scoped_params: Arc<&RayTraceParams> = Arc::new(&arc_params);
+						let scoped_acc = arc_acc.clone();
 
 						scoped.execute(move || {
-							let color = compute_color(scoped_camera, scoped_scene, scoped_params, x, y);
-							match scoped_sink.lock().unwrap().set_sample(x, y, &color) {
-								Ok(()) => { },
-								Err(err) => { panic!(err) }
-							};
+							compute_samples(scoped_camera, scoped_scene, scoped_params, x, y, scoped_acc);
 						});
 					}
 				}
 			});
 
-			try!(arc_sink.lock().unwrap().finish_frame(frame));
+			try!(arc_acc.flush(sink, frame));
+			Arc::get_mut(&mut arc_acc).unwrap().reset();
 
 			info!("Rendered frame {} in {}", frame + 1, (now() - start));
 		}
+
+		let sample_filter = Arc::get_mut(&mut arc_acc).unwrap().destroy();
+		Arc::get_mut(&mut arc_params).unwrap().set_filter(sample_filter);
 
 		Ok(())
 	}
 }
 
-fn compute_color(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>, params: Arc<&RayTraceParams>,
-		x: usize, y: usize) -> RayTraceColor {
+fn compute_samples(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>, params: Arc<&RayTraceParams>,
+		x: usize, y: usize, acc: Arc<RayTraceSampleAccumulator>) {
 	match params.get_jitter() {
 		&None => {
-			let ray = camera.make_ray(x as f64 + 0.5_f64, y as f64 + 0.5_f64);
-			return compute_color_for_ray(&ray, *camera, *scene, *params, 0);
+			let p_x = x as f64 + 0.5_f64;
+			let p_y = y as f64 + 0.5_f64;
+
+			let ray = camera.make_ray(p_x, p_y);
+			let color = compute_color_for_ray(&ray, *camera, *scene, *params, 0);
+
+			acc.add_sample(x, y, RayTraceSample { x: p_x, y: p_y, color: color });
 		},
 		&Some(ref jitter) => {
 			let ray_count = jitter.get_ray_count();
 
-			let mut color = RayTraceColor::new();
 			for _ in 0..ray_count {
-				let (jx, jy) = jitter.apply(x as f64, y as f64);
-				let ray = camera.make_ray(jx, jy);
-				let ray_color = compute_color_for_ray(&ray, *camera, *scene, *params, 0);
-
-				color += ray_color / (ray_count as f32);
+				let (p_x, p_y) = jitter.apply(x as f64, y as f64);
+				let ray = camera.make_ray(p_x, p_y);
+				let color = compute_color_for_ray(&ray, *camera, *scene, *params, 0);
+				acc.add_sample(x, y, RayTraceSample { x: p_x, y: p_y, color: color });
 			}
-
-			return color;
 		}
 	}
 }

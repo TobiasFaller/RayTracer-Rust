@@ -14,6 +14,7 @@ extern crate scoped_threadpool;
 mod aabb;
 mod hit;
 mod ray;
+mod sample;
 mod nonsync;
 
 mod math_util;

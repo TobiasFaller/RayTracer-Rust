@@ -1,8 +1,9 @@
 use rand::{Rng, thread_rng};
+use std::mem::swap;
 
 use color::RayTraceColor;
-
 use light::RayTraceShading;
+use sample::RayTraceSampleFilter;
 
 pub trait RayTraceJitter {
 	fn apply(&self, x: f64, y: f64) -> (f64, f64);
@@ -42,6 +43,7 @@ impl RayTraceOutputParams {
 #[allow(dead_code)]
 pub struct RayTraceParams {
 	ray_jitter: Option<Box<RayTraceJitter + Sync>>,
+	filter: Option<Box<RayTraceSampleFilter + Sync>>,
 	shading: Option<Box<RayTraceShading + Sync>>,
 	max_depth: usize,
 	background_color: RayTraceColor,
@@ -54,6 +56,7 @@ impl RayTraceParams {
 	pub fn new() -> RayTraceParams {
 		RayTraceParams {
 			ray_jitter: None,
+			filter: None,
 			max_depth: 3,
 			background_color: RayTraceColor::transparent(),
 			indirect_color: RayTraceColor::white(),
@@ -68,6 +71,20 @@ impl RayTraceParams {
 
 	pub fn get_jitter(&self) -> &Option<Box<RayTraceJitter + Sync>> {
 		&self.ray_jitter
+	}
+
+	pub fn get_filter(&self) -> &Option<Box<RayTraceSampleFilter + Sync>> {
+		&self.filter
+	}
+
+	pub fn unwrap_filter(&mut self) -> Option<Box<RayTraceSampleFilter + Sync>> {
+		let mut filter = None;
+		swap(&mut self.filter, &mut filter);
+		filter
+	}
+
+	pub fn set_filter(&mut self, filter: Option<Box<RayTraceSampleFilter + Sync>>) {
+		self.filter = filter;
 	}
 
 	pub fn set_max_depth(&mut self, max_depth: usize) {
