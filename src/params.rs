@@ -5,7 +5,7 @@ use color::RayTraceColor;
 use light::RayTraceShading;
 use sample::RayTraceSampleFilter;
 
-pub trait RayTraceJitter {
+pub trait RayTraceSampling {
 	fn apply(&self, x: f64, y: f64) -> (f64, f64);
 	fn get_ray_count(&self) -> usize;
 }
@@ -42,7 +42,7 @@ impl RayTraceOutputParams {
 
 #[allow(dead_code)]
 pub struct RayTraceParams {
-	ray_jitter: Option<Box<RayTraceJitter + Sync>>,
+	sampling: Option<Box<RayTraceSampling + Sync>>,
 	filter: Option<Box<RayTraceSampleFilter + Sync>>,
 	shading: Option<Box<RayTraceShading + Sync>>,
 	max_depth: usize,
@@ -55,7 +55,7 @@ pub struct RayTraceParams {
 impl RayTraceParams {
 	pub fn new() -> RayTraceParams {
 		RayTraceParams {
-			ray_jitter: None,
+			sampling: None,
 			filter: None,
 			max_depth: 3,
 			background_color: RayTraceColor::transparent(),
@@ -65,12 +65,12 @@ impl RayTraceParams {
 		}
 	}
 
-	pub fn set_ray_jitter(&mut self, jitter: Option<Box<RayTraceJitter + Sync>>) {
-		self.ray_jitter = jitter;
+	pub fn set_sampling(&mut self, sampling: Option<Box<RayTraceSampling + Sync>>) {
+		self.sampling = sampling;
 	}
 
-	pub fn get_jitter(&self) -> &Option<Box<RayTraceJitter + Sync>> {
-		&self.ray_jitter
+	pub fn get_sampling(&self) -> &Option<Box<RayTraceSampling + Sync>> {
+		&self.sampling
 	}
 
 	pub fn get_filter(&self) -> &Option<Box<RayTraceSampleFilter + Sync>> {
@@ -129,13 +129,13 @@ impl RayTraceParams {
 }
 
 #[allow(dead_code)]
-pub struct RayTraceRandomJitter {
+pub struct RayTraceRandomSampling {
 	size: f64,
 	ray_count: usize
 }
 
 #[allow(dead_code)]
-impl RayTraceRandomJitter {
+impl RayTraceRandomSampling {
 	pub fn new() -> Self {
 		Self {
 			size: 0.2_f64,
@@ -159,7 +159,7 @@ impl RayTraceRandomJitter {
 	}
 }
 
-impl RayTraceJitter for RayTraceRandomJitter {
+impl RayTraceSampling for RayTraceRandomSampling {
 	fn get_ray_count(&self) -> usize {
 		self.ray_count
 	}

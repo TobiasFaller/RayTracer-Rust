@@ -4,14 +4,14 @@ use sample::RayTraceSampleFilter;
 
 use sample::index_of;
 
-pub struct RayTraceBoxFilter { }
+pub struct RayTraceAverageFilter { }
 
-impl RayTraceBoxFilter {
+impl RayTraceAverageFilter {
 	pub fn new() -> Self { Self { } }
 }
 
 #[allow(unused_variables)]
-impl RayTraceSampleFilter for RayTraceBoxFilter {
+impl RayTraceSampleFilter for RayTraceAverageFilter {
 	fn filter(&self, x: usize, y: usize, width: usize, height: usize, samples: &Box<[&Vec<RayTraceSample>]>)
 			-> RayTraceColor {
 		let mut average = RayTraceColor::new_with(0.0, 0.0, 0.0, 0.0);
@@ -30,4 +30,4 @@ impl RayTraceSampleFilter for RayTraceBoxFilter {
 	}
 }
 
-unsafe impl Sync for RayTraceBoxFilter { }
+unsafe impl Sync for RayTraceAverageFilter { }

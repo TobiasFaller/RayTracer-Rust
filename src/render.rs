@@ -78,7 +78,7 @@ impl RayTracer {
 
 fn compute_samples(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>, params: Arc<&RayTraceParams>,
 		x: usize, y: usize, acc: Arc<RayTraceSampleAccumulator>) {
-	match params.get_jitter() {
+	match params.get_sampling() {
 		&None => {
 			let p_x = x as f64 + 0.5_f64;
 			let p_y = y as f64 + 0.5_f64;
@@ -88,11 +88,11 @@ fn compute_samples(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>
 
 			acc.add_sample(x, y, RayTraceSample { x: p_x, y: p_y, color: color });
 		},
-		&Some(ref jitter) => {
-			let ray_count = jitter.get_ray_count();
+		&Some(ref sampling) => {
+			let ray_count = sampling.get_ray_count();
 
 			for _ in 0..ray_count {
-				let (p_x, p_y) = jitter.apply(x as f64, y as f64);
+				let (p_x, p_y) = sampling.apply(x as f64, y as f64);
 				let ray = camera.make_ray(p_x, p_y);
 				let color = compute_color_for_ray(&ray, *camera, *scene, *params, 0);
 				acc.add_sample(x, y, RayTraceSample { x: p_x, y: p_y, color: color });

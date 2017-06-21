@@ -1,5 +1,5 @@
-mod box_filter;
-pub use self::box_filter::RayTraceBoxFilter;
+mod avg;
+pub use self::avg::RayTraceAverageFilter;
 
 use std::cell::UnsafeCell;
 use std::io::Error as IOError;
@@ -40,7 +40,7 @@ impl RayTraceSampleAccumulator {
 				width: 0,
 				height: 0,
 				samples: None,
-				filter: box RayTraceBoxFilter::new()
+				filter: box RayTraceAverageFilter::new()
 			}
 		}
 	}
@@ -111,7 +111,7 @@ impl RayTraceSampleAccumulator {
 	}
 
 	pub fn destroy(&mut self) -> Option<Box<RayTraceSampleFilter + Sync>> {
-		let mut filter: Box<RayTraceSampleFilter + Sync> = box RayTraceBoxFilter::new();
+		let mut filter: Box<RayTraceSampleFilter + Sync> = box RayTraceAverageFilter::new();
 		swap(&mut filter, &mut self.filter);
 		Some(filter)
 	}
