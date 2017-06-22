@@ -14,7 +14,6 @@ extern crate scoped_threadpool;
 mod aabb;
 mod hit;
 mod ray;
-mod sample;
 mod nonsync;
 
 mod math_util;
@@ -27,6 +26,7 @@ pub mod material;
 pub mod object;
 pub mod params;
 pub mod render;
+pub mod sample;
 pub mod sink;
 pub mod scene;
 pub mod source;

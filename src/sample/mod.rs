@@ -1,5 +1,10 @@
-mod avg;
-pub use self::avg::RayTraceAverageFilter;
+mod avg_filter;
+mod box_filter;
+mod gauss_filter;
+
+pub use self::avg_filter::RayTraceAverageFilter;
+pub use self::box_filter::RayTraceBoxFilter;
+pub use self::gauss_filter::RayTraceGaussFilter;
 
 use std::cell::UnsafeCell;
 use std::io::Error as IOError;

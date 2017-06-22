@@ -63,6 +63,7 @@ impl RayTracer {
 				}
 			});
 
+			info!("Sinking frame {}", frame + 1);
 			try!(arc_acc.flush(sink, frame));
 			Arc::get_mut(&mut arc_acc).unwrap().reset();
 
