@@ -1,3 +1,9 @@
+mod seq;
+mod func;
+
+pub use self::seq::RayTraceAnimSequence;
+pub use self::func::RayTraceAnimFunc;
+
 use vecmath::Vector3;
 use vecmath::vec3_add;
 use vecmath::vec3_scale;

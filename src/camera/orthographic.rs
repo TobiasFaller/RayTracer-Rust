@@ -3,6 +3,7 @@ use std::f64;
 use vecmath::*;
 use math_util::*;
 
+use anim::RayTraceAnimation;
 use camera::RayTraceCamera;
 use params::RayTraceOutputParams;
 use ray::RayTraceRay;
@@ -15,6 +16,8 @@ pub struct RayTracerCameraOrthographic {
 	height: f64,
 	screen_width: f64,
 	screen_height: f64,
+	anim_pos: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
+	anim_rot: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
 	data: Option<WorkingData>
 }
 
@@ -37,6 +40,8 @@ impl<'a> RayTracerCameraOrthographic {
 			height: height,
 			screen_width: screen.get_width() as f64,
 			screen_height: screen.get_height() as f64,
+			anim_rot: None,
+			anim_pos: None,
 			data: None
 		}
 	}
@@ -50,11 +55,34 @@ impl<'a> RayTracerCameraOrthographic {
 		self.rotation = rotation;
 		self.data = None;
 	}
+
+	pub fn set_anim_pos_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
+		self.anim_pos = anim;
+	}
+
+	pub fn set_anim_pos(&mut self, anim: Box<RayTraceAnimation<Vector3<f64>>>) {
+		self.anim_pos = Some(anim);
+	}
+
+	pub fn set_anim_rot_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
+		self.anim_rot = anim;
+	}
+
+	pub fn set_anim_rot(&mut self, anim: Box<RayTraceAnimation<Vector3<f64>>>) {
+		self.anim_rot = Some(anim);
+	}
 }
 
 #[allow(unused_variables)]
 impl RayTraceCamera for RayTracerCameraOrthographic {
 	fn init(&mut self, frame: usize) {
+		if let Some(ref anim_pos) = self.anim_pos {
+			self.position = anim_pos.next_frame(frame);
+		}
+		if let Some(ref anim_rot) = self.anim_rot {
+			self.rotation = anim_rot.next_frame(frame);
+		}
+
 		// Start with a view into neg z-axis
 		let plane_vec1 = [self.width / self.screen_width, 0.0, 0.0];
 		let plane_vec2 = [0.0, -self.height / self.screen_height, 0.0];

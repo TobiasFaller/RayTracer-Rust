@@ -55,6 +55,60 @@ impl RayTraceColor {
 		}
 	}
 
+	pub fn red() -> Self {
+		RayTraceColor {
+			r: 1.0,
+			g: 0.0,
+			b: 0.0,
+			a: 1.0
+		}
+	}
+
+	pub fn green() -> Self {
+		RayTraceColor {
+			r: 0.0,
+			g: 1.0,
+			b: 0.0,
+			a: 1.0
+		}
+	}
+
+	pub fn blue() -> Self {
+		RayTraceColor {
+			r: 0.0,
+			g: 0.0,
+			b: 1.0,
+			a: 1.0
+		}
+	}
+
+	pub fn yellow() -> Self {
+		RayTraceColor {
+			r: 1.0,
+			g: 1.0,
+			b: 0.0,
+			a: 1.0
+		}
+	}
+
+	pub fn cyan() -> Self {
+		RayTraceColor {
+			r: 0.0,
+			g: 1.0,
+			b: 1.0,
+			a: 1.0
+		}
+	}
+
+	pub fn magenta() -> Self {
+		RayTraceColor {
+			r: 1.0,
+			g: 0.0,
+			b: 1.0,
+			a: 1.0
+		}
+	}
+
 	pub fn set(&mut self, r: f32, g: f32, b: f32, a: f32) {
 		self.r = r;
 		self.g = g;
