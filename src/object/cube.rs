@@ -27,6 +27,7 @@ pub struct RayTraceObjectCube {
 	rotation: Vector3<f64>,
 	anim_pos: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
 	anim_rot: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
+	anim_size: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
 	data: Option<WorkingData>
 }
 
@@ -40,6 +41,7 @@ impl RayTraceObjectCube {
 			rotation: [0.0, 0.0, 0.0],
 			anim_rot: None,
 			anim_pos: None,
+			anim_size: None,
 			data: None
 		}
 	}
@@ -52,6 +54,7 @@ impl RayTraceObjectCube {
 			rotation: [0.0, 0.0, 0.0],
 			anim_rot: None,
 			anim_pos: None,
+			anim_size: None,
 			data: None
 		}
 	}
@@ -80,6 +83,14 @@ impl RayTraceObjectCube {
 
 	pub fn set_anim_rot(&mut self, anim: Box<RayTraceAnimation<Vector3<f64>>>) {
 		self.anim_rot = Some(anim);
+	}
+
+	pub fn set_anim_size_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
+		self.anim_size = anim;
+	}
+
+	pub fn set_anim_size(&mut self, anim: Box<RayTraceAnimation<Vector3<f64>>>) {
+		self.anim_size = Some(anim);
 	}
 
 	fn get_material(&self, index: usize) -> &Box<RayTraceMaterial> {
@@ -113,6 +124,9 @@ impl RayTraceObject for RayTraceObjectCube {
 		}
 		if let Some(ref anim_rot) = self.anim_rot {
 			self.rotation = anim_rot.next_frame(frame);
+		}
+		if let Some(ref anim_size) = self.anim_size {
+			self.size = anim_size.next_frame(frame);
 		}
 
 		let plane_vec1 = [1.0, 0.0, 0.0];

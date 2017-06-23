@@ -109,6 +109,35 @@ impl RayTraceColor {
 		}
 	}
 
+	pub fn chroma(angle_deg: f32) -> Self {
+		let angle = angle_deg.min(360.0).max(0.0);
+
+		let r;
+		let g;
+		let b;
+
+		if angle <= 120.0 {
+			r = (120.0 - angle) / 120.0;
+			g = angle / 120.0;
+			b = 0.0;
+		} else if angle <= 240.0 {
+			r = 0.0;
+			g = (240.0 - angle) / 120.0;
+			b = (angle - 120.0) / 120.0;
+		} else {
+			r = (angle - 240.0) / 120.0;
+			g = 0.0;
+			b = (360.0 - angle) / 120.0;
+		}
+
+		Self {
+			r: r,
+			g: g,
+			b: b,
+			a: 1.0
+		}
+	}
+
 	pub fn set(&mut self, r: f32, g: f32, b: f32, a: f32) {
 		self.r = r;
 		self.g = g;
