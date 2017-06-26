@@ -4,6 +4,7 @@ Ray Tracer
 This project is a ray tracer written in *Rust* by Tobias Faller.
 
 The ray tracer currently features:
+
 	- Only boxes and planes
 	- Animation of objects
 	- Phong illumination model
