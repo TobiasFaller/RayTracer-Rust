@@ -1,10 +1,10 @@
 mod cube;
 mod plane;
-//mod sphere;
+mod sphere;
 
 pub use self::cube::RayTraceObjectCube;
 pub use self::plane::RayTraceObjectPlane;
-//pub use self::sphere::RayTraceObjectSphere;
+pub use self::sphere::RayTraceObjectSphere;
 
 use aabb::AABB;
 use hit::RayTraceRayHit;

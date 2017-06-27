@@ -53,7 +53,7 @@ impl RayTracePhongShading {
 
 impl RayTraceShading for RayTracePhongShading {
 	fn apply(&self, ray: &RayTraceRay, ray_hit: &RayTraceRayHit, camera: &Box<RayTraceCamera>, scene: &RayTraceScene,
-			params: &RayTraceParams) -> RayTraceColor {
+			params: &RayTraceParams) -> (RayTraceColor, RayTraceColor) {
 		let surface_normal = ray_hit.get_surface_normal();
 		let hit_distance = ray_hit.get_distance();
 		let light_ray_start = ray.get_position_on_ray(hit_distance - 1e-10);
@@ -114,9 +114,11 @@ impl RayTraceShading for RayTracePhongShading {
 		}
 
 		// Mix the colors with respect to the maximum color levels
-		let mut final_color = ambient_component * self.ambient + diffuse_component * self.diffuse
-			+ specular_component * self.specular;
+		let mut final_color = ambient_component * self.ambient + diffuse_component * self.diffuse;
+		let final_overlay = specular_component * self.specular;
+
 		final_color.set_a(material_color.get_a());
-		return final_color;
+
+		return (final_color, final_overlay);
 	}
 }

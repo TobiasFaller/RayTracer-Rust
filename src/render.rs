@@ -145,20 +145,23 @@ fn compute_color_for_ray(ray: &RayTraceRay, camera: &Box<RayTraceCamera>, scene:
 	});
 
 	let hit = ray_hits.remove(0);
-	let material_color;
+	let (mut material_color, overlay_color);
 
 	if let &Some(ref shading_fn) = params.get_shading() {
-		material_color = shading_fn.apply(ray, &hit, camera, scene, params);
+		let (m, o) = shading_fn.apply(ray, &hit, camera, scene, params);
+		material_color = m;
+		overlay_color = o;
 	} else {
 		material_color = hit.get_surface_material().get_color().clone();
+		overlay_color = RayTraceColor::transparent();
 	}
 
 	let reflectance = hit.get_surface_material().get_reflectance();
 	if reflectance != 0.0 {
 		let reflected_ray = compute_reflected_ray(hit.get_surface_normal().clone(), ray, hit.get_distance());
 		let reflected_color = compute_color_for_ray(&reflected_ray, camera, scene, params, depth + 1);
-		return mix_color(&material_color, &reflected_color, reflectance);
+		material_color = mix_color(&material_color, &reflected_color, reflectance);
 	}
 
-	return material_color;
+	return mix_color(&material_color, &overlay_color, overlay_color.get_a());
 }

@@ -9,7 +9,7 @@ use scene::RayTraceScene;
 
 pub trait RayTraceShading {
 	fn apply(&self, ray: &RayTraceRay, ray_hit: &RayTraceRayHit, camera: &Box<RayTraceCamera>, scene: &RayTraceScene,
-		params: &RayTraceParams) -> RayTraceColor;
+		params: &RayTraceParams) -> (RayTraceColor, RayTraceColor);
 }
 
 pub struct RayTraceSpotLight {
