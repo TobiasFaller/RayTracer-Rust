@@ -1,3 +1,7 @@
+mod obj_loader;
+
+pub use self::obj_loader::obj_load;
+
 use std::f64;
 use std::mem;
 
@@ -28,15 +32,16 @@ pub struct RayTraceObjectModel {
 	anim_rot: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
 	anim_size: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
 	vertices: Vec<Vector3<f64>>,
-	vertice_normals: Vec<Vector3<f64>>,
+	vertex_normals: Vec<Vector3<f64>>,
 	texture_normals: Vec<Vector2<f64>>,
+	faces: Vec<[Vector3<usize>; 3]>,
 	data: Option<WorkingData>
 }
 
 struct WorkingData {
 	aabb: AABB,
 	vertices: Vec<Vector3<f64>>,
-	vertice_normals: Vec<Vector3<f64>>
+	vertex_normals: Vec<Vector3<f64>>
 }
 
 impl RayTraceObjectModel {
@@ -48,8 +53,8 @@ impl RayTraceObjectModel {
 				vec3_add(row_mat3_transform(rot_matrix, vec3_mul(*vert, self.size)), self.position));
 		}
 
-		for norm in self.vertice_normals.iter() {
-			data.vertice_normals.push(
+		for norm in self.vertex_normals.iter() {
+			data.vertex_normals.push(
 				vec3_add(row_mat3_transform(rot_matrix, vec3_mul(*norm, self.size)), self.position));
 		}
 	}
@@ -76,13 +81,13 @@ impl RayTraceObject for RayTraceObjectModel {
 			WorkingData {
 				aabb: AABB::new([0.0, 0.0, 0.0], [0.0, 0.0, 0.0]),
 				vertices: Vec::new(),
-				vertice_normals: Vec::new()
+				vertex_normals: Vec::new()
 			}
 		};
 
 		// Reset size field of vector
 		data.vertices.clear();
-		data.vertice_normals.clear();
+		data.vertex_normals.clear();
 
 		self.transform_data(&mut data);
 		self.data = Some(data);
