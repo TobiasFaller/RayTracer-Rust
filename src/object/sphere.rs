@@ -111,7 +111,7 @@ impl RayTraceObject for RayTraceObjectSphere {
 		if let Some(ref data) = self.data {
 			return Some(&data.aabb);
 		} else {
-			panic!("Qube was not initialized!");
+			panic!("Sphere was not initialized!");
 		}
 	}
 
@@ -144,7 +144,7 @@ impl RayTraceObject for RayTraceObjectSphere {
 
 			return Some(RayTraceRayHit::new(t, hit_point, surface_normal, self.material.get_hit(angle_t, angle_p)));
 		} else {
-			panic!("Qube was not initialized!");
+			panic!("Sphere was not initialized!");
 		}
 	}
 }
