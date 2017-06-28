@@ -5,6 +5,8 @@ use vecmath::{vec4_sub, vec4_scale};
 
 use ray::RayTraceRay;
 
+pub const PI: f64 = 3.14159265359;
+
 #[allow(dead_code)]
 pub fn rotate_z(angle: f64) -> Matrix3<f64> {
 	let sin = angle.sin();

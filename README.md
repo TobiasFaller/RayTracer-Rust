@@ -5,7 +5,7 @@ This project is a ray tracer written in *Rust* by Tobias Faller.
 
 The ray tracer currently features:
 
- - Only boxes and planes
+ - Only boxes, spheres and planes
  - Animation of objects
  - Phong illumination model
  - *PNG*, *JPEG* and *Y4M* image / video export

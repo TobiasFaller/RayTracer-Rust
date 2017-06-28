@@ -35,6 +35,14 @@ impl RayTraceCheckerboardMaterial {
 		}
 	}
 
+	pub fn new_with_size(scale: [f64; 2], reflectance: f32) -> Self {
+		Self {
+			colors: [RayTraceColor::black(), RayTraceColor::white()],
+			scale: scale,
+			reflectance: reflectance
+		}
+	}
+
 	pub fn new_with_reflectance(reflectance: f32) -> Self {
 		Self {
 			colors: [RayTraceColor::black(), RayTraceColor::white()],

@@ -1,7 +1,8 @@
 use std::f64;
 
 use vecmath::Vector3;
-use vecmath::{vec3_add, vec3_sub, vec3_scale, vec3_neg, vec3_dot, vec3_square_len, vec3_normalized_sub};
+use vecmath::Matrix3;
+use vecmath::{vec3_add, vec3_sub, vec3_neg, vec3_dot, vec3_square_len, vec3_normalized_sub};
 use vecmath::row_mat3_transform;
 
 use aabb::AABB;
@@ -11,7 +12,7 @@ use material::RayTraceMaterial;
 use object::RayTraceObject;
 use ray::RayTraceRay;
 
-use math_util::compute_plane_hit;
+use math_util::PI;
 use math_util::rotate_xyz;
 
 #[allow(dead_code)]
@@ -82,7 +83,8 @@ impl RayTraceObjectSphere {
 }
 
 struct WorkingData {
-	aabb: AABB
+	aabb: AABB,
+	rot_matrix: Matrix3<f64>
 }
 
 #[allow(unused_variables)]
@@ -98,11 +100,10 @@ impl RayTraceObject for RayTraceObjectSphere {
 			self.size = anim_size.next_frame(frame);
 		}
 
-		let rot = rotate_xyz(self.rotation);
-
 		let size_vec = [self.size, self.size, self.size];
 		self.data = Some(WorkingData {
-				aabb: AABB::new(vec3_sub(self.center, size_vec), vec3_add(self.center, size_vec))
+				aabb: AABB::new(vec3_sub(self.center, size_vec), vec3_add(self.center, size_vec)),
+				rot_matrix: rotate_xyz(vec3_neg(self.rotation))
 			});
 	}
 
@@ -137,7 +138,11 @@ impl RayTraceObject for RayTraceObjectSphere {
 			let hit_point = ray.get_position_on_ray(t);
 			let surface_normal = vec3_normalized_sub(hit_point, self.center);
 
-			return Some(RayTraceRayHit::new(t, hit_point, surface_normal, self.material.get_hit(0.0, 0.0)));
+			let tex_normal = row_mat3_transform(data.rot_matrix, surface_normal);
+			let angle_t = if tex_normal[0] != 0.0 {(tex_normal[2] / tex_normal[0]).atan()} else { -PI };
+			let angle_p = tex_normal[1].acos();
+
+			return Some(RayTraceRayHit::new(t, hit_point, surface_normal, self.material.get_hit(angle_t, angle_p)));
 		} else {
 			panic!("Qube was not initialized!");
 		}
