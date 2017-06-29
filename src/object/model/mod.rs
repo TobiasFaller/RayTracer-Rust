@@ -24,12 +24,13 @@ use math_util::compute_plane_hit;
 pub struct RayTraceObjectModel {
 	material: Box<RayTraceMaterial>,
 	shading: RayTraceModelShading,
-	size: Vector3<f64>,
+	scale: Vector3<f64>,
 	position: Vector3<f64>,
 	rotation: Vector3<f64>,
+	offset: Vector3<f64>,
 	anim_pos: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
 	anim_rot: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
-	anim_size: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
+	anim_scale: Option<Box<RayTraceAnimation<Vector3<f64>>>>,
 	vertices: Vec<Vector3<f64>>,
 	vertex_normals: Vec<Vector3<f64>>,
 	texture_normals: Vec<Vector2<f64>>,
@@ -91,8 +92,12 @@ impl RayTraceObjectModel {
 		self.position = position;
 	}
 
-	pub fn set_size(&mut self, size: Vector3<f64>) {
-		self.size = size;
+	pub fn set_scale(&mut self, scale: Vector3<f64>) {
+		self.scale = scale;
+	}
+
+	pub fn set_offset(&mut self, offset: Vector3<f64>) {
+		self.offset = offset;
 	}
 
 	pub fn set_anim_pos_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
@@ -111,12 +116,12 @@ impl RayTraceObjectModel {
 		self.anim_rot = Some(anim);
 	}
 
-	pub fn set_anim_size_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
-		self.anim_size = anim;
+	pub fn set_anim_scale_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
+		self.anim_scale = anim;
 	}
 
-	pub fn set_anim_size(&mut self, anim: Box<RayTraceAnimation<Vector3<f64>>>) {
-		self.anim_size = Some(anim);
+	pub fn set_anim_scale(&mut self, anim: Box<RayTraceAnimation<Vector3<f64>>>) {
+		self.anim_scale = Some(anim);
 	}
 
 	fn transform_data(&self, data: &mut WorkingData) {
@@ -124,7 +129,8 @@ impl RayTraceObjectModel {
 
 		let mut vertices = Vec::with_capacity(self.vertices.len());
 		for vert in self.vertices.iter() {
-			let vec = vec3_add(row_mat3_transform(rot_matrix, vec3_mul(*vert, self.size)), self.position);
+			let vec = vec3_add(row_mat3_transform(rot_matrix, vec3_mul(vec3_sub(*vert, self.offset), self.scale)),
+				self.position);
 			vertices.push(vec);
 
 			match data.aabb {
@@ -167,8 +173,8 @@ impl RayTraceObject for RayTraceObjectModel {
 		if let Some(ref anim_rot) = self.anim_rot {
 			self.rotation = anim_rot.next_frame(frame);
 		}
-		if let Some(ref anim_size) = self.anim_size {
-			self.size = anim_size.next_frame(frame);
+		if let Some(ref anim_scale) = self.anim_scale {
+			self.scale = anim_scale.next_frame(frame);
 		}
 
 		let mut working_data = None;

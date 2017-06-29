@@ -83,6 +83,17 @@ pub fn obj_load(file_name: &str, material: Box<RayTraceMaterial>) -> Result<RayT
 						for v in 1..4 {
 							let data: Vec<&str> = data[v].trim().split('/').collect();
 							match data.len() {
+								1 => {
+									match data[0].parse::<usize>() {
+										Ok(v) => {
+											current_face.push([v, 0, 0]);
+										},
+										Err(_) => {
+											return format_err(
+												&format!("Invalid face data at element {}", v), line_number);
+										}
+									}
+								},
 								3 => {
 									let vert = data[0].parse::<usize>();
 									let text = data[1].parse::<usize>();
@@ -134,12 +145,13 @@ pub fn obj_load(file_name: &str, material: Box<RayTraceMaterial>) -> Result<RayT
 		RayTraceObjectModel {
 			material: material,
 			shading: RayTraceModelShading::Flat,
-			size: [1.0, 1.0, 1.0],
+			scale: [1.0, 1.0, 1.0],
 			position: [0.0, 0.0, 0.0],
 			rotation: [0.0, 0.0, 0.0],
+			offset: [0.0, 0.0, 0.0],
 			anim_pos: None,
 			anim_rot: None,
-			anim_size: None,
+			anim_scale: None,
 			vertices: vertices,
 			vertex_normals: vertex_normals,
 			texture_normals: texture_normals,

@@ -37,12 +37,10 @@ impl RayTraceObjectPlane {
 
 	pub fn set_rotation(&mut self, rotation: Vector3<f64>) {
 		self.rotation = rotation;
-		self.data = None;
 	}
 
 	pub fn set_position(&mut self, position: Vector3<f64>) {
 		self.center = position;
-		self.data = None;
 	}
 
 	pub fn set_anim_pos_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
