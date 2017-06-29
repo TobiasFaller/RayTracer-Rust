@@ -4,10 +4,11 @@ pub use self::obj_loader::obj_load;
 
 use std::f64;
 use std::mem;
+use std::cmp::Ordering;
 
 use vecmath::Vector3;
 use vecmath::Vector2;
-use vecmath::{vec3_add, vec3_mul};
+use vecmath::{vec3_add, vec3_mul, vec3_sub};
 use vecmath::row_mat3_transform;
 
 use aabb::AABB;
@@ -18,13 +19,11 @@ use object::RayTraceObject;
 use ray::RayTraceRay;
 
 use math_util::rotate_xyz;
-
-pub struct RayTraceVertice {
-	
-}
+use math_util::compute_plane_hit;
 
 pub struct RayTraceObjectModel {
 	material: Box<RayTraceMaterial>,
+	shading: RayTraceModelShading,
 	size: Vector3<f64>,
 	position: Vector3<f64>,
 	rotation: Vector3<f64>,
@@ -38,24 +37,76 @@ pub struct RayTraceObjectModel {
 	data: Option<WorkingData>
 }
 
+pub enum RayTraceModelShading {
+	Flat
+}
+
 struct WorkingData {
 	aabb: AABB,
-	vertices: Vec<Vector3<f64>>,
-	vertex_normals: Vec<Vector3<f64>>
+	vertex_normals: Vec<Vector3<f64>>,
+	faces: Vec<Face>
+}
+
+struct Face {
+	id: usize,
+	position: Vector3<f64>,
+	vec: [Vector3<f64>; 2]
+}
+
+impl Face {
+	fn get_normals(&self, faces: &Vec<[Vector3<usize>; 3]>, normals: &Vec<Vector3<f64>>,
+			texture_normals: &Vec<Vector2<f64>>) -> [(Vector3<f64>, Vector2<f64>); 3] {
+		let face = faces[self.id];
+
+		let n = [face[0][1], face[1][1], face[2][1]];
+		let t = [face[0][2], face[0][2], face[0][2]];
+
+		[
+			(
+				if n[0] == 0 { [0.0, 0.0, 0.0] } else { normals[n[0] - 1] },
+				if t[0] == 0 { [0.0, 0.0] } else { texture_normals[t[0] - 1] }
+			),
+			(
+				if n[1] == 0 { [0.0, 0.0, 0.0] } else { normals[n[1] - 1] },
+				if t[1] == 0 { [0.0, 0.0] } else { texture_normals[t[1] - 1] }
+			),
+			(
+				if n[2] == 0 { [0.0, 0.0, 0.0] } else { normals[n[2] - 1] },
+				if t[2] == 0 { [0.0, 0.0] } else { texture_normals[t[2] - 1] }
+			)
+		]
+	}
 }
 
 impl RayTraceObjectModel {
 	fn transform_data(&self, data: &mut WorkingData) {
 		let rot_matrix = rotate_xyz(self.rotation);
 
+		let mut vertices = Vec::with_capacity(self.vertices.len());
 		for vert in self.vertices.iter() {
-			data.vertices.push(
+			vertices.push(
 				vec3_add(row_mat3_transform(rot_matrix, vec3_mul(*vert, self.size)), self.position));
 		}
 
 		for norm in self.vertex_normals.iter() {
 			data.vertex_normals.push(
 				vec3_add(row_mat3_transform(rot_matrix, vec3_mul(*norm, self.size)), self.position));
+		}
+
+		for (id, face) in self.faces.iter().enumerate() {
+			let v1 = vertices[face[0][0] - 1];
+			let v2 = vertices[face[1][0] - 1];
+			let v3 = vertices[face[2][0] - 1];
+
+			let pos = v1;
+			let vec1 = vec3_sub(v2, v1);
+			let vec2 = vec3_sub(v3, v1);
+
+			data.faces.push(Face {
+					id: id,
+					position: pos,
+					vec: [vec1, vec2]
+				});
 		}
 	}
 }
@@ -80,14 +131,13 @@ impl RayTraceObject for RayTraceObjectModel {
 		let mut data = if working_data.is_some() { working_data.unwrap() } else {
 			WorkingData {
 				aabb: AABB::new([0.0, 0.0, 0.0], [0.0, 0.0, 0.0]),
-				vertices: Vec::new(),
-				vertex_normals: Vec::new()
+				vertex_normals: Vec::new(),
+				faces: Vec::new()
 			}
 		};
 
 		// Reset size field of vector
-		data.vertices.clear();
-		data.vertex_normals.clear();
+		data.faces.clear();
 
 		self.transform_data(&mut data);
 		self.data = Some(data);
@@ -103,7 +153,55 @@ impl RayTraceObject for RayTraceObjectModel {
 
 	fn next_hit(&self, ray: &RayTraceRay) -> Option<RayTraceRayHit> {
 		if let Some(ref data) = self.data {
-			return None;
+			let mut ray_hits: Vec<RayTraceRayHit> = Vec::new();
+
+			for face in data.faces.iter() {
+				if let Some((dist, vec1, vec2)) = compute_plane_hit(ray, face.position, face.vec[0], face.vec[1]) {
+					if vec1 < 0.0 || vec1 > 1.0 || vec2 < 0.0 || vec2 > 1.0 {
+						continue; // Missed triangle
+					}
+
+					let normals = face.get_normals(&self.faces, &data.vertex_normals, &self.texture_normals);
+
+					let surface_normal;
+					let texture_normal;
+					match self.shading {
+						RayTraceModelShading::Flat => {
+							surface_normal = [
+								(normals[0].0[0] + normals[1].0[0] + normals[2].0[0]) / 3.0,
+								(normals[0].0[1] + normals[1].0[1] + normals[2].0[1]) / 3.0,
+								(normals[0].0[2] + normals[1].0[2] + normals[2].0[2]) / 3.0
+							];
+							texture_normal = [
+								(normals[0].1[0] + normals[1].1[0] + normals[2].1[0]) / 3.0,
+								(normals[0].1[1] + normals[1].1[1] + normals[2].1[1]) / 3.0
+							];
+						}
+					}
+
+					let material_hit = self.material.get_hit(texture_normal[0], texture_normal[1]);
+
+					ray_hits.push(
+						RayTraceRayHit::new(dist, ray.get_position_on_ray(dist), surface_normal, material_hit));
+				}
+			}
+
+			if ray_hits.is_empty() {
+				return None;
+			}
+
+			ray_hits.sort_by(|a, b| {
+				match a.get_distance().partial_cmp(&b.get_distance()) {
+					Some(ordering) => {
+						ordering
+					},
+					None => {
+						Ordering::Equal
+					}
+				}
+			});
+
+			return Some(ray_hits.remove(0));
 		} else {
 			panic!("Model was not initialized!");
 		}
