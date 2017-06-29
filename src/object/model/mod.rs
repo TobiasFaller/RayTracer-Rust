@@ -124,13 +124,8 @@ impl RayTraceObjectModel {
 
 		let mut vertices = Vec::with_capacity(self.vertices.len());
 		for vert in self.vertices.iter() {
-			vertices.push(
-				vec3_add(row_mat3_transform(rot_matrix, vec3_mul(*vert, self.size)), self.position));
-		}
-
-		for norm in self.vertex_normals.iter() {
-			let vec = vec3_add(row_mat3_transform(rot_matrix, *norm), self.position);
-			data.vertex_normals.push(vec);
+			let vec = vec3_add(row_mat3_transform(rot_matrix, vec3_mul(*vert, self.size)), self.position);
+			vertices.push(vec);
 
 			match data.aabb {
 				Some(ref mut aabb) => {
@@ -140,6 +135,10 @@ impl RayTraceObjectModel {
 					data.aabb = Some(AABB::new(vec3_sub(vec, AABB_MIN_DIST), vec3_add(vec, AABB_MIN_DIST)));
 				}
 			}
+		}
+
+		for norm in self.vertex_normals.iter() {
+			data.vertex_normals.push(vec3_add(row_mat3_transform(rot_matrix, *norm), self.position));
 		}
 
 		for (id, face) in self.faces.iter().enumerate() {

@@ -85,8 +85,8 @@ pub fn obj_load(file_name: &str, material: Box<RayTraceMaterial>) -> Result<RayT
 							match data.len() {
 								3 => {
 									let vert = data[0].parse::<usize>();
-									let norm = data[1].parse::<usize>();
-									let text = data[2].parse::<usize>();
+									let text = data[1].parse::<usize>();
+									let norm = data[2].parse::<usize>();
 
 									match vert {
 										Ok(v) => {
@@ -122,9 +122,12 @@ pub fn obj_load(file_name: &str, material: Box<RayTraceMaterial>) -> Result<RayT
 		}
 	}
 
-	if let Some(face) = validate_model(&faces, vertices.len(), vertex_normals.len(), texture_normals.len()) {
+	info!("Loaded {} vertices, {} vertex normals and {} texture normals", vertices.len(), vertex_normals.len(),
+		texture_normals.len());
+
+	if let Some((face, t)) = validate_model(&faces, vertices.len(), vertex_normals.len(), texture_normals.len()) {
 		return format_err(
-			&format!("Face {} is not valid since some vertex / normal / texture data is missing", face), 0);
+			&format!("Face {} is not valid since some {} data is missing", face, t), 0);
 	}
 
 	Ok(
@@ -150,11 +153,18 @@ fn format_err<T>(message: &str, line: usize) -> Result<T, IOError> {
 	Err(IOError::new(ErrorKind::InvalidData, format!("Error on line {}: {}", line, message)))
 }
 
-fn validate_model(faces: &Vec<[Vector3<usize>; 3]>, vert: usize, vert_norm: usize, text_norm: usize) -> Option<usize> {
+fn validate_model(faces: &Vec<[Vector3<usize>; 3]>, vert: usize, vert_norm: usize, text_norm: usize)
+		-> Option<(usize, &str)> {
 	for (i, face) in faces.iter().enumerate() {
 		for v in face.iter() {
-			if v[0] > vert || v[0] == 0 || v[1] > vert_norm || v[2] > text_norm {
-				return Some(i);
+			if v[0] > vert || v[0] == 0 {
+				return Some((i, "vertex"));
+			}
+			if v[1] > vert_norm {
+				return Some((i, "normal"));
+			}
+			if v[2] > text_norm {
+				return Some((i, "texture"));
 			}
 		}
 	}
