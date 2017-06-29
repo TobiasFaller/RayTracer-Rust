@@ -153,7 +153,7 @@ fn format_err<T>(message: &str, line: usize) -> Result<T, IOError> {
 fn validate_model(faces: &Vec<[Vector3<usize>; 3]>, vert: usize, vert_norm: usize, text_norm: usize) -> Option<usize> {
 	for (i, face) in faces.iter().enumerate() {
 		for v in face.iter() {
-			if v[0] >= vert || v[1] >= vert_norm || v[2] >= text_norm {
+			if v[0] > vert || v[0] == 0 || v[1] > vert_norm || v[2] > text_norm {
 				return Some(i);
 			}
 		}

@@ -43,11 +43,14 @@ impl RayTracer {
 		let mut thread_pool = Pool::new(8);
 
 		for frame in 0..out_params.get_frames() {
+			info!("Initializing frame {} ...", frame + 1);
 			let start = time::now();
-
 			Arc::get_mut(&mut arc_camera).unwrap().init(frame);
 			Arc::get_mut(&mut arc_scene).unwrap().init(frame);
+			info!("Initialized frame {} in {}", frame + 1, (time::now() - start));
 
+			info!("Rendering frame {} ...", frame + 1);
+			let start = time::now();
 			thread_pool.scoped(|scoped| {
 				for y in 0..out_params.get_height() {
 					for x in 0..out_params.get_width() {
@@ -67,7 +70,7 @@ impl RayTracer {
 
 			// TODO: Do sinking async.
 			let start = time::now();
-			info!("Sinking frame {}", frame + 1);
+			info!("Sinking frame {} ...", frame + 1);
 			try!(arc_acc.flush(sink, frame));
 			Arc::get_mut(&mut arc_acc).unwrap().reset();
 			info!("Sank frame {} in {}", frame + 1, (time::now() - start));

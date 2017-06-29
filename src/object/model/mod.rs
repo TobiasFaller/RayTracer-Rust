@@ -8,7 +8,7 @@ use std::cmp::Ordering;
 
 use vecmath::Vector3;
 use vecmath::Vector2;
-use vecmath::{vec3_add, vec3_mul, vec3_sub};
+use vecmath::{vec3_add, vec3_mul, vec3_sub, vec3_cross};
 use vecmath::row_mat3_transform;
 
 use aabb::AABB;
@@ -38,11 +38,12 @@ pub struct RayTraceObjectModel {
 }
 
 pub enum RayTraceModelShading {
-	Flat
+	Flat,
+	Soft
 }
 
 struct WorkingData {
-	aabb: AABB,
+	aabb: Option<AABB>,
 	vertex_normals: Vec<Vector3<f64>>,
 	faces: Vec<Face>
 }
@@ -60,25 +61,64 @@ impl Face {
 
 		let n = [face[0][1], face[1][1], face[2][1]];
 		let t = [face[0][2], face[0][2], face[0][2]];
+		let face_normal = vec3_cross(self.vec[0], self.vec[1]);
 
 		[
 			(
-				if n[0] == 0 { [0.0, 0.0, 0.0] } else { normals[n[0] - 1] },
+				if n[0] == 0 { face_normal } else { normals[n[0] - 1] },
 				if t[0] == 0 { [0.0, 0.0] } else { texture_normals[t[0] - 1] }
 			),
 			(
-				if n[1] == 0 { [0.0, 0.0, 0.0] } else { normals[n[1] - 1] },
+				if n[1] == 0 { face_normal } else { normals[n[1] - 1] },
 				if t[1] == 0 { [0.0, 0.0] } else { texture_normals[t[1] - 1] }
 			),
 			(
-				if n[2] == 0 { [0.0, 0.0, 0.0] } else { normals[n[2] - 1] },
+				if n[2] == 0 { face_normal } else { normals[n[2] - 1] },
 				if t[2] == 0 { [0.0, 0.0] } else { texture_normals[t[2] - 1] }
 			)
 		]
 	}
 }
 
+const AABB_MIN_DIST: Vector3<f64> = [0.001, 0.001, 0.001];
+
 impl RayTraceObjectModel {
+	pub fn set_rotation(&mut self, rotation: Vector3<f64>) {
+		self.rotation = rotation;
+	}
+
+	pub fn set_position(&mut self, position: Vector3<f64>) {
+		self.position = position;
+	}
+
+	pub fn set_size(&mut self, size: Vector3<f64>) {
+		self.size = size;
+	}
+
+	pub fn set_anim_pos_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
+		self.anim_pos = anim;
+	}
+
+	pub fn set_anim_pos(&mut self, anim: Box<RayTraceAnimation<Vector3<f64>>>) {
+		self.anim_pos = Some(anim);
+	}
+
+	pub fn set_anim_rot_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
+		self.anim_rot = anim;
+	}
+
+	pub fn set_anim_rot(&mut self, anim: Box<RayTraceAnimation<Vector3<f64>>>) {
+		self.anim_rot = Some(anim);
+	}
+
+	pub fn set_anim_size_opt(&mut self, anim: Option<Box<RayTraceAnimation<Vector3<f64>>>>) {
+		self.anim_size = anim;
+	}
+
+	pub fn set_anim_size(&mut self, anim: Box<RayTraceAnimation<Vector3<f64>>>) {
+		self.anim_size = Some(anim);
+	}
+
 	fn transform_data(&self, data: &mut WorkingData) {
 		let rot_matrix = rotate_xyz(self.rotation);
 
@@ -89,8 +129,17 @@ impl RayTraceObjectModel {
 		}
 
 		for norm in self.vertex_normals.iter() {
-			data.vertex_normals.push(
-				vec3_add(row_mat3_transform(rot_matrix, vec3_mul(*norm, self.size)), self.position));
+			let vec = vec3_add(row_mat3_transform(rot_matrix, *norm), self.position);
+			data.vertex_normals.push(vec);
+
+			match data.aabb {
+				Some(ref mut aabb) => {
+					aabb.expand(vec);
+				},
+				None => {
+					data.aabb = Some(AABB::new(vec3_sub(vec, AABB_MIN_DIST), vec3_add(vec, AABB_MIN_DIST)));
+				}
+			}
 		}
 
 		for (id, face) in self.faces.iter().enumerate() {
@@ -130,7 +179,7 @@ impl RayTraceObject for RayTraceObjectModel {
 
 		let mut data = if working_data.is_some() { working_data.unwrap() } else {
 			WorkingData {
-				aabb: AABB::new([0.0, 0.0, 0.0], [0.0, 0.0, 0.0]),
+				aabb: None,
 				vertex_normals: Vec::new(),
 				faces: Vec::new()
 			}
@@ -138,6 +187,7 @@ impl RayTraceObject for RayTraceObjectModel {
 
 		// Reset size field of vector
 		data.faces.clear();
+		data.aabb = None;
 
 		self.transform_data(&mut data);
 		self.data = Some(data);
@@ -145,7 +195,7 @@ impl RayTraceObject for RayTraceObjectModel {
 
 	fn get_aabb(&self) -> Option<&AABB> {
 		if let Some(ref data) = self.data {
-			return Some(&data.aabb);
+			return data.aabb.as_ref();
 		} else {
 			panic!("Model was not initialized!");
 		}
@@ -157,7 +207,7 @@ impl RayTraceObject for RayTraceObjectModel {
 
 			for face in data.faces.iter() {
 				if let Some((dist, vec1, vec2)) = compute_plane_hit(ray, face.position, face.vec[0], face.vec[1]) {
-					if vec1 < 0.0 || vec1 > 1.0 || vec2 < 0.0 || vec2 > 1.0 {
+					if vec1 < 0.0 || vec1 > 1.0 || vec2 < 0.0 || vec2 > 1.0 || vec1 + vec2 > 1.0 {
 						continue; // Missed triangle
 					}
 
@@ -176,6 +226,9 @@ impl RayTraceObject for RayTraceObjectModel {
 								(normals[0].1[0] + normals[1].1[0] + normals[2].1[0]) / 3.0,
 								(normals[0].1[1] + normals[1].1[1] + normals[2].1[1]) / 3.0
 							];
+						},
+						_ => {
+							panic!("Unsupported shading model");
 						}
 					}
 

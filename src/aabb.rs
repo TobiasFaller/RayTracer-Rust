@@ -19,6 +19,15 @@ impl AABB {
 		}
 	}
 
+	pub fn expand(&mut self, x: Vector3<f64>) {
+		self.start[0] = self.start[0].min(x[0]);
+		self.start[1] = self.start[1].min(x[1]);
+		self.start[2] = self.start[2].min(x[2]);
+		self.end[0] = self.end[0].max(x[0]);
+		self.end[1] = self.end[1].max(x[1]);
+		self.end[2] = self.end[2].max(x[2]);
+	}
+
 	pub fn is_hit(&self, ray: &RayTraceRay) -> bool {
 		let [x, y, z] = *ray.get_position();
 		let (x_start, x_end, y_start, y_end, z_start, z_end) = project_points_onto_ray(ray, (self.start, self.end));

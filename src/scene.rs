@@ -25,6 +25,10 @@ impl RayTraceScene {
 		for obj in self.objects.iter_mut() {
 			obj.init(frame);
 		}
+
+		for spot_light in self.spot_lights.iter_mut() {
+			spot_light.init(frame);
+		}
 	}
 
 	pub fn get_objects(&self) -> &Vec<Unsafe<Box<RayTraceObject>>> {
