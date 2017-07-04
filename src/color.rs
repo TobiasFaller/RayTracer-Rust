@@ -373,6 +373,32 @@ impl<'a> Mul<&'a RayTraceColor> for &'a RayTraceColor {
 	}
 }
 
+impl<'a> Mul<&'a RayTraceColor> for RayTraceColor {
+	type Output = RayTraceColor;
+
+	fn mul(self, rhs: &'a RayTraceColor) -> RayTraceColor {
+		RayTraceColor {
+			r: self.r * rhs.r,
+			g: self.g * rhs.g,
+			b: self.b * rhs.b,
+			a: self.a * rhs.a
+		}
+	}
+}
+
+impl<'a> Mul<RayTraceColor> for &'a RayTraceColor {
+	type Output = RayTraceColor;
+
+	fn mul(self, rhs: RayTraceColor) -> RayTraceColor {
+		RayTraceColor {
+			r: self.r * rhs.r,
+			g: self.g * rhs.g,
+			b: self.b * rhs.b,
+			a: self.a * rhs.a
+		}
+	}
+}
+
 impl MulAssign<f32> for RayTraceColor {
 	fn mul_assign(&mut self, rhs: f32) {
 		self.r *= rhs;

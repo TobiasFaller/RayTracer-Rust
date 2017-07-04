@@ -8,7 +8,7 @@ use std::cmp::Ordering;
 
 use vecmath::Vector3;
 use vecmath::Vector2;
-use vecmath::{vec3_add, vec3_mul, vec3_sub, vec3_cross};
+use vecmath::{vec3_add, vec3_mul, vec3_sub, vec3_cross, vec3_normalized};
 use vecmath::row_mat3_transform;
 
 use aabb::AABB;
@@ -23,7 +23,7 @@ use math_util::compute_plane_hit;
 
 pub struct RayTraceObjectModel {
 	material: Box<RayTraceMaterial>,
-	shading: RayTraceModelShading,
+	interpolation: RayTraceModelNormalInterpolation,
 	scale: Vector3<f64>,
 	position: Vector3<f64>,
 	rotation: Vector3<f64>,
@@ -38,9 +38,9 @@ pub struct RayTraceObjectModel {
 	data: Option<WorkingData>
 }
 
-pub enum RayTraceModelShading {
-	Flat,
-	Soft
+pub enum RayTraceModelNormalInterpolation {
+	Average,
+	Linear
 }
 
 struct WorkingData {
@@ -125,6 +125,11 @@ impl RayTraceObjectModel {
 	}
 
 	fn transform_data(&self, data: &mut WorkingData) {
+		// Reset stored data
+		data.aabb = None;
+		data.faces.clear();
+		data.vertex_normals.clear();
+
 		let rot_matrix = rotate_xyz(self.rotation);
 
 		let mut vertices = Vec::with_capacity(self.vertices.len());
@@ -144,7 +149,7 @@ impl RayTraceObjectModel {
 		}
 
 		for norm in self.vertex_normals.iter() {
-			data.vertex_normals.push(vec3_add(row_mat3_transform(rot_matrix, *norm), self.position));
+			data.vertex_normals.push(vec3_normalized(row_mat3_transform(rot_matrix, *norm)));
 		}
 
 		for (id, face) in self.faces.iter().enumerate() {
@@ -190,10 +195,6 @@ impl RayTraceObject for RayTraceObjectModel {
 			}
 		};
 
-		// Reset size field of vector
-		data.faces.clear();
-		data.aabb = None;
-
 		self.transform_data(&mut data);
 		self.data = Some(data);
 	}
@@ -220,8 +221,8 @@ impl RayTraceObject for RayTraceObjectModel {
 
 					let surface_normal;
 					let texture_normal;
-					match self.shading {
-						RayTraceModelShading::Flat => {
+					match self.interpolation {
+						RayTraceModelNormalInterpolation::Average => {
 							surface_normal = [
 								(normals[0].0[0] + normals[1].0[0] + normals[2].0[0]) / 3.0,
 								(normals[0].0[1] + normals[1].0[1] + normals[2].0[1]) / 3.0,

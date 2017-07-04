@@ -73,8 +73,7 @@ impl RayTraceShading for RayTracePhongShading {
 		let mut specular_component = RayTraceColor::new_with(0.0, 0.0, 0.0, 0.0);
 		let mut diffuse_component = RayTraceColor::new_with(0.0, 0.0, 0.0, 0.0);
 
-		for light in scene.get_spot_lights() {
-			let light_color = light.get_color();
+		for light in scene.get_lights() {
 			let light_position = light.get_position();
 			let light_distance = vec3_len(vec3_sub(light_position.clone(), light_ray_start));
 
@@ -100,14 +99,16 @@ impl RayTraceShading for RayTracePhongShading {
 			}
 
 			if !light_ray_intersected {
+				let light_color = light.get_light(&light_ray);
 				let diffuse = vec3_dot(surface_normal.clone(), light_ray_direction) as f32;
 				if diffuse > 0.0 {
-					diffuse_component += material_color * light_color * diffuse * light_color.get_a() * diffuse_light;
+					diffuse_component += material_color * light_color.clone() * diffuse * light_color.get_a()
+						* diffuse_light;
 				}
 
 				let specular = vec3_dot(reflected_ray.get_direction().clone(), camera_direction) as f32;
 				if specular > 0.0 {
-					specular_component += light_color * (surface_roughness + 2.0) / (2.0 * 3.14159265359)
+					specular_component += &light_color * (surface_roughness + 2.0) / (2.0 * 3.14159265359)
 						* specular.powf(surface_roughness) * light_color.get_a() * specular_light;
 				}
 			}

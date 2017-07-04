@@ -6,6 +6,9 @@ use vecmath::{vec4_sub, vec4_scale};
 use ray::RayTraceRay;
 
 pub const PI: f64 = 3.14159265359;
+pub const TWO_PI: f64 = 2.0 * PI;
+pub const DEG_TO_RAD: f64 = 360.0 / TWO_PI;
+pub const RAD_TO_DEG: f64 = TWO_PI / 360.0;
 
 #[allow(dead_code)]
 pub fn rotate_z(angle: f64) -> Matrix3<f64> {

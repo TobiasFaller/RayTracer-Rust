@@ -8,7 +8,7 @@ use vecmath::Vector2;
 use vecmath::Vector3;
 
 use object::RayTraceObjectModel;
-use object::model::RayTraceModelShading;
+use object::model::RayTraceModelNormalInterpolation;
 use material::RayTraceMaterial;
 
 pub fn obj_load(file_name: &str, material: Box<RayTraceMaterial>) -> Result<RayTraceObjectModel, IOError> {
@@ -144,7 +144,7 @@ pub fn obj_load(file_name: &str, material: Box<RayTraceMaterial>) -> Result<RayT
 	Ok(
 		RayTraceObjectModel {
 			material: material,
-			shading: RayTraceModelShading::Flat,
+			interpolation: RayTraceModelNormalInterpolation::Average,
 			scale: [1.0, 1.0, 1.0],
 			position: [0.0, 0.0, 0.0],
 			rotation: [0.0, 0.0, 0.0],
