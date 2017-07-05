@@ -134,7 +134,10 @@ fn compute_color_for_ray(ray: &RayTraceRay, camera: &Box<RayTraceCamera>, scene:
 	// Collect all ray hits
 	let mut ray_hits = BinaryHeap::<RayTraceHitHeapEntry<RayTraceRayHit>>::new();
 
-	for object in scene.get_objects().iter() {
+	let objects = scene.get_objects();
+	for (distance, object_index) in tree.get_hits(ray) {
+		let ref object = objects[object_index];
+
 		if let Some(aabb) = object.get_aabb() {
 			if !aabb.is_hit(ray) {
 				continue;
@@ -142,10 +145,10 @@ fn compute_color_for_ray(ray: &RayTraceRay, camera: &Box<RayTraceCamera>, scene:
 		}
 
 		if let Some(hit) = object.next_hit(ray) {
-			ray_hits.push(RayTraceHitHeapEntry {
-					distance: hit.get_distance(),
-					element: hit
-				});
+			ray_hits.push(RayTraceHitHeapEntry::new(hit.get_distance(), hit));
+			if distance >= 0.0 {
+				break; // We have a hit of an ordered object
+			}
 		}
 	}
 
@@ -158,7 +161,7 @@ fn compute_color_for_ray(ray: &RayTraceRay, camera: &Box<RayTraceCamera>, scene:
 				return params.get_indirect_color().clone();
 			}
 		},
-		Some(RayTraceHitHeapEntry { element: hit, distance: _ }) => {
+		Some(RayTraceHitHeapEntry { value: hit, distance: _ }) => {
 			let (mut material_color, overlay_color);
 
 			if let &Some(ref shading_fn) = params.get_shading() {

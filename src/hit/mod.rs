@@ -9,7 +9,16 @@ pub use self::material::RayTraceMaterialHit;
 
 pub struct RayTraceHitHeapEntry<T> {
 	pub distance: f64,
-	pub element: T
+	pub value: T
+}
+
+impl<T> RayTraceHitHeapEntry<T> {
+	pub fn new(distance: f64, value: T) -> Self {
+		Self {
+			distance: distance,
+			value: value
+		}
+	}
 }
 
 #[allow(unused_variables)]
