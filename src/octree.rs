@@ -1,8 +1,7 @@
 use std::collections::BinaryHeap;
-use std::cmp::Ord;
-use std::cmp::Ordering;
 
 use aabb::AABB;
+use hit::RayTraceHitHeapEntry;
 use ray::RayTraceRay;
 
 pub struct RayTraceOctree<T> {
@@ -20,7 +19,7 @@ enum RayTraceOctreeNode<T> {
 	}
 }
 
-impl<T> RayTraceOctree<T> where T: Eq + 'static {
+impl<T> RayTraceOctree<T> where T: Eq + Clone + 'static {
 	pub fn new() -> Self {
 		Self {
 			root: RayTraceOctreeNode::Elements { elements: Vec::new() },
@@ -41,53 +40,34 @@ impl<T> RayTraceOctree<T> where T: Eq + 'static {
 
 	pub fn get_hit(&mut self, ray: &RayTraceRay) -> Box<Iterator<Item = (f64, T)>> {
 		let mut iterator = OctreeIterator::<T> {
-			heap: BinaryHeap::new()
+			heap: BinaryHeap::new(),
+			without_aabb: self.without_aabb.clone()
 		};
 
 		return box iterator;
 	}
 }
 
-#[derive(PartialEq)]
-struct HeapEntry<T> where T: Eq {
-	distance: f64,
-	element: T
-}
-
-impl<T> Eq for HeapEntry<T> where T: Eq { }
-
-impl<T> PartialOrd for HeapEntry<T> where T: Eq {
-	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-		if self.distance == other.distance {
-			None
-		} else {
-			self.distance.partial_cmp(&other.distance)
-		}
-	}
-}
-
-impl<T> Ord for HeapEntry<T> where T: Eq {
-	fn cmp(&self, other: &Self) -> Ordering {
-		if self.distance == other.distance {
-			Ordering::Equal
-		} else {
-			match self.distance.partial_cmp(&other.distance) {
-				None => Ordering::Equal,
-				Some(ord) => ord
-			}
-		}
-	}
-}
-
 struct OctreeIterator<T> where T: Eq {
-	heap: BinaryHeap<HeapEntry<T>>
+	heap: BinaryHeap<RayTraceHitHeapEntry<*const RayTraceOctreeNode<T>>>,
+	without_aabb: Vec<T>
 }
 
 impl<T> Iterator for OctreeIterator<T> where T: Eq {
 	type Item = (f64, T);
 
 	fn next(&mut self) -> Option<Self::Item> {
-		None
+		if let Some(val) = self.without_aabb.pop() {
+			return Some((-1.0, val));
+		}
+
+		match self.heap.pop() {
+			None => { None },
+			Some(RayTraceHitHeapEntry {element: node, distance}) => {
+				
+				None
+			}
+		}
 	}
 }
 

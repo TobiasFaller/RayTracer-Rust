@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 use std::f64;
 use std::io::Error as IOError;
 use std::sync::{Arc};
@@ -10,6 +10,7 @@ use scoped_threadpool::Pool;
 use camera::RayTraceCamera;
 use color::RayTraceColor;
 use color::mix_color;
+use hit::RayTraceHitHeapEntry;
 use hit::RayTraceRayHit;
 use octree::RayTraceOctree;
 use params::RayTraceParams;
@@ -106,7 +107,7 @@ fn compute_samples(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>
 			let p_y = y as f64 + 0.5_f64;
 
 			let ray = camera.make_ray(p_x, p_y);
-			let color = compute_color_for_ray(&ray, *camera, *scene, *params, 0);
+			let color = compute_color_for_ray(&ray, *camera, *scene, *params, &*tree.as_ref(), 0);
 
 			acc.add_sample(x, y, RayTraceSample { x: p_x, y: p_y, color: color });
 		},
@@ -116,7 +117,7 @@ fn compute_samples(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>
 			for _ in 0..ray_count {
 				let (p_x, p_y) = sampling.apply(x as f64, y as f64);
 				let ray = camera.make_ray(p_x, p_y);
-				let color = compute_color_for_ray(&ray, *camera, *scene, *params, 0);
+				let color = compute_color_for_ray(&ray, *camera, *scene, *params, &*tree.as_ref(), 0);
 				acc.add_sample(x, y, RayTraceSample { x: p_x, y: p_y, color: color });
 			}
 		}
@@ -124,14 +125,14 @@ fn compute_samples(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>
 }
 
 fn compute_color_for_ray(ray: &RayTraceRay, camera: &Box<RayTraceCamera>, scene: &RayTraceScene,
-		params: &RayTraceParams, depth: usize) -> RayTraceColor {
+		params: &RayTraceParams, tree: &RayTraceOctree<usize>, depth: usize) -> RayTraceColor {
 	// If this is an indirect ray we cancel after a maximum depth
 	if depth > params.get_max_depth() {
 		return params.get_indirect_color().clone();
 	}
 
 	// Collect all ray hits
-	let mut ray_hits = Vec::<RayTraceRayHit>::new();
+	let mut ray_hits = BinaryHeap::<RayTraceHitHeapEntry<RayTraceRayHit>>::new();
 
 	for object in scene.get_objects().iter() {
 		if let Some(aabb) = object.get_aabb() {
@@ -141,48 +142,42 @@ fn compute_color_for_ray(ray: &RayTraceRay, camera: &Box<RayTraceCamera>, scene:
 		}
 
 		if let Some(hit) = object.next_hit(ray) {
-			ray_hits.push(hit);
+			ray_hits.push(RayTraceHitHeapEntry {
+					distance: hit.get_distance(),
+					element: hit
+				});
 		}
 	}
 
 	// Return background color on no hit
-	if ray_hits.is_empty() {
-		if depth == 0 {
-			return params.get_background_color().clone();
-		} else {
-			return params.get_indirect_color().clone();
-		}
-	}
-
-	ray_hits.sort_by(|a, b| {
-		match a.get_distance().partial_cmp(&b.get_distance()) {
-			Some(ordering) => {
-				ordering
-			},
-			None => {
-				Ordering::Equal
+	match ray_hits.pop() {
+		None => {
+			if depth == 0 {
+				return params.get_background_color().clone();
+			} else {
+				return params.get_indirect_color().clone();
 			}
+		},
+		Some(RayTraceHitHeapEntry { element: hit, distance: _ }) => {
+			let (mut material_color, overlay_color);
+
+			if let &Some(ref shading_fn) = params.get_shading() {
+				let (m, o) = shading_fn.apply(ray, &hit, camera, scene, params);
+				material_color = m;
+				overlay_color = o;
+			} else {
+				material_color = hit.get_surface_material().get_color().clone();
+				overlay_color = RayTraceColor::transparent();
+			}
+
+			let reflectance = hit.get_surface_material().get_reflectance();
+			if reflectance != 0.0 {
+				let reflected_ray = compute_reflected_ray(hit.get_surface_normal().clone(), ray, hit.get_distance());
+				let reflected_color = compute_color_for_ray(&reflected_ray, camera, scene, params, tree, depth + 1);
+				material_color = mix_color(&material_color, &reflected_color, reflectance);
+			}
+
+			return mix_color(&material_color, &overlay_color, overlay_color.get_a());
 		}
-	});
-
-	let hit = ray_hits.remove(0);
-	let (mut material_color, overlay_color);
-
-	if let &Some(ref shading_fn) = params.get_shading() {
-		let (m, o) = shading_fn.apply(ray, &hit, camera, scene, params);
-		material_color = m;
-		overlay_color = o;
-	} else {
-		material_color = hit.get_surface_material().get_color().clone();
-		overlay_color = RayTraceColor::transparent();
 	}
-
-	let reflectance = hit.get_surface_material().get_reflectance();
-	if reflectance != 0.0 {
-		let reflected_ray = compute_reflected_ray(hit.get_surface_normal().clone(), ray, hit.get_distance());
-		let reflected_color = compute_color_for_ray(&reflected_ray, camera, scene, params, depth + 1);
-		material_color = mix_color(&material_color, &reflected_color, reflectance);
-	}
-
-	return mix_color(&material_color, &overlay_color, overlay_color.get_a());
 }
