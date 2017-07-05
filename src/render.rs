@@ -11,6 +11,7 @@ use camera::RayTraceCamera;
 use color::RayTraceColor;
 use color::mix_color;
 use hit::RayTraceRayHit;
+use octree::RayTraceOctree;
 use params::RayTraceParams;
 use ray::RayTraceRay;
 use sample::RayTraceSample;
@@ -39,14 +40,26 @@ impl RayTracer {
 		let mut arc_params: Arc<&mut RayTraceParams> = Arc::new(params);
 		let mut arc_camera: Arc<&mut Box<RayTraceCamera>> = Arc::new(camera);
 		let mut arc_scene: Arc<&mut RayTraceScene> = Arc::new(scene);
+		let mut arc_tree: Arc<RayTraceOctree<usize>>;
 
 		let mut thread_pool = Pool::new(8);
 
 		for frame in 0..out_params.get_frames() {
 			info!("Initializing frame {} ...", frame + 1);
 			let start = time::now();
-			Arc::get_mut(&mut arc_camera).unwrap().init(frame);
-			Arc::get_mut(&mut arc_scene).unwrap().init(frame);
+
+			{
+				Arc::get_mut(&mut arc_camera).unwrap().init(frame);
+				let scene = Arc::get_mut(&mut arc_scene).unwrap();
+				scene.init(frame);
+
+				let mut tree = RayTraceOctree::new();
+				for (i, object) in scene.get_objects().iter().enumerate() {
+					tree.add(i, object.get_aabb());
+				}
+				arc_tree = Arc::new(tree);
+			}
+
 			info!("Initialized frame {} in {}", frame + 1, (time::now() - start));
 
 			info!("Rendering frame {} ...", frame + 1);
@@ -58,9 +71,10 @@ impl RayTracer {
 						let scoped_scene: Arc<&RayTraceScene> = Arc::new(&arc_scene);
 						let scoped_params: Arc<&RayTraceParams> = Arc::new(&arc_params);
 						let scoped_acc = arc_acc.clone();
+						let scoped_tree = arc_tree.clone();
 
 						scoped.execute(move || {
-							compute_samples(scoped_camera, scoped_scene, scoped_params, x, y, scoped_acc);
+							compute_samples(scoped_camera, scoped_scene, scoped_params, x, y, scoped_acc, scoped_tree);
 						});
 					}
 				}
@@ -85,7 +99,7 @@ impl RayTracer {
 }
 
 fn compute_samples(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>, params: Arc<&RayTraceParams>,
-		x: usize, y: usize, acc: Arc<RayTraceSampleAccumulator>) {
+		x: usize, y: usize, acc: Arc<RayTraceSampleAccumulator>, tree: Arc<RayTraceOctree<usize>>) {
 	match params.get_sampling() {
 		&None => {
 			let p_x = x as f64 + 0.5_f64;
