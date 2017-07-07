@@ -10,6 +10,7 @@ use anim::RayTraceAnimation;
 use hit::RayTraceRayHit;
 use material::RayTraceMaterial;
 use object::RayTraceObject;
+use object::RayTraceHitable;
 use ray::RayTraceRay;
 
 use math_util::PI;
@@ -111,7 +112,9 @@ impl RayTraceObject for RayTraceObjectSphere {
 			panic!("Sphere was not initialized!");
 		}
 	}
+}
 
+impl RayTraceHitable for RayTraceObjectSphere {
 	fn next_hit(&self, ray: &RayTraceRay) -> Option<RayTraceRayHit> {
 		if let Some(ref data) = self.data {
 			let l = ray.get_direction().clone();

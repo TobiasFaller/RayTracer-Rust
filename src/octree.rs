@@ -4,85 +4,176 @@ use std::mem;
 use aabb::AABB;
 use hit::RayTraceHitHeapEntry;
 use ray::RayTraceRay;
+use object::RayTraceHitable;
 
-pub struct RayTraceOctree<T> {
-	root: Node<T>
+pub struct RayTraceOctree {
+	root: Node,
+	faces: Vec<*const Box<RayTraceHitable>>
 }
 
-struct Node<T> {
+struct Node {
 	aabb: AABB,
-	content: NodeContent<T>
+	content: NodeContent
 }
 
-enum NodeContent<T> {
-	Container(Box<[Node<T>; 8]>),
-	Elements(Box<Vec<T>>)
+enum NodeContent {
+	Container(Box<[Node; 8]>),
+	Elements(Box<Vec<usize>>)
 }
 
-impl<T> RayTraceOctree<T> where T: Eq + Clone {
+const SPLIT_THRESHOLD: usize = 20;
+
+impl RayTraceOctree {
 	pub fn new(aabb: AABB) -> Self {
 		Self {
 			root: Node {
 				aabb: aabb,
 				content: NodeContent::Elements(box Vec::new())
-			}
+			},
+			faces: Vec::new()
 		}
 	}
 
-	pub fn add(&mut self, element: T, aabb: AABB) {
+	pub fn add(&mut self, object: *const Box<RayTraceHitable>) -> usize {
+		let index = self.faces.len();
+		self.faces.push(object);
+
 		let mut stack = Vec::new();
-		stack.push(&mut self.root as *mut Node<T>);
+		stack.push(&mut self.root as *mut Node);
 
 		loop {
 			match stack.pop() {
-				None => { return; },
+				None => { return index; },
 				Some(node) => {
 					unsafe {
-						if !(*node).aabb.intersect(&aabb) {
+						if !(*node).aabb.intersect_hitable(& *object) {
 							continue;
 						}
 
+						let content;
 						match (*node).content {
 							NodeContent::Container(ref mut children) => {
 								for child in children.iter_mut() {
 									stack.push(child as *mut _);
 								}
+								continue;
 							},
 							NodeContent::Elements(ref mut elements) => {
+								elements.push(index);
+
+								if elements.len() < SPLIT_THRESHOLD {
+									continue;
+								}
+
+								content = elements;
+							}
+						}
+
+						let mut content = self.split_container(content, &(*node).aabb);
+						mem::swap(&mut (*node).content, &mut content);
+					}
+				}
+			}
+		}
+
+		index
+	}
+
+	pub fn get_hits<'b>(&self, ray: &'b RayTraceRay) -> Box<Iterator<Item = RayTraceOctreeItem> + 'b> {
+		let mut heap = BinaryHeap::new();
+		heap.push(RayTraceHitHeapEntry::new(0.0, &self.root as *const _));
+
+		return box OctreeIterator::<'b> {
+			ray: ray,
+			heap: heap,
+			next_group: None
+		};
+	}
+
+	fn split_container(&self, elements: &Box<Vec<usize>>, aabb: &AABB) -> NodeContent {
+		println!("Splitting");
+
+		let start = aabb.get_start();
+		let end = aabb.get_end();
+		let mid = [(start[0] + end[0]) / 2.0, (start[1] + end[1]) / 2.0, (start[2] + end[2]) / 2.0];
+
+		let mut nodes = [
+			Node {
+				aabb: AABB::new(mid, start.clone()),
+				content: NodeContent::Elements(box Vec::new())
+			},
+			Node {
+				aabb: AABB::new(mid, [start[0], start[1], end[2]]),
+				content: NodeContent::Elements(box Vec::new())
+			},
+			Node {
+				aabb: AABB::new(mid, [start[0], end[1], start[2]]),
+				content: NodeContent::Elements(box Vec::new())
+			},
+			Node {
+				aabb: AABB::new(mid, [start[0], end[1], end[2]]),
+				content: NodeContent::Elements(box Vec::new())
+			},
+			Node {
+				aabb: AABB::new(mid, [end[0], start[1], start[2]]),
+				content: NodeContent::Elements(box Vec::new())
+			},
+			Node {
+				aabb: AABB::new(mid, [end[0], start[1], end[2]]),
+				content: NodeContent::Elements(box Vec::new())
+			},
+			Node {
+				aabb: AABB::new(mid, [end[0], end[1], start[2]]),
+				content: NodeContent::Elements(box Vec::new())
+			},
+			Node {
+				aabb: AABB::new(mid, end.clone()),
+				content: NodeContent::Elements(box Vec::new())
+			}
+		];
+
+		for node in nodes.iter_mut() {
+			println!("Node with aabb: {:.5}, {:.5}, {:.5} {:.5}, {:.5}, {:.5}",
+				node.aabb.get_start()[0],
+				node.aabb.get_start()[1],
+				node.aabb.get_start()[2],
+				node.aabb.get_end()[0],
+				node.aabb.get_end()[1],
+				node.aabb.get_end()[2]);
+
+			for element in elements.iter() {
+				unsafe {
+					if node.aabb.intersect_hitable(& *self.faces[*element]) {
+						match node.content {
+							NodeContent::Elements(ref mut elements) => {
 								elements.push(element.clone());
+							},
+							_ => {
+								panic!("What happened?");
 							}
 						}
 					}
 				}
 			}
 		}
-	}
 
-	pub fn get_hits<'a>(&self, ray: &'a RayTraceRay) -> Box<Iterator<Item = RayTraceOctreeItem<T>> + 'a> where T: 'a {
-		let mut heap = BinaryHeap::new();
-		heap.push(RayTraceHitHeapEntry::new(0.0, &self.root as *const _));
-
-		return box OctreeIterator::<'a, T> {
-			ray: ray,
-			heap: heap,
-			next_group: None
-		};
+		NodeContent::Container(box nodes)
 	}
 }
 
-pub enum RayTraceOctreeItem<T> {
+pub enum RayTraceOctreeItem {
 	FlushGroup,
-	Item(T)
+	Item(usize)
 }
 
-struct OctreeIterator<'a, T> where T: Eq + Clone {
+struct OctreeIterator<'a> {
 	ray: &'a RayTraceRay,
-	heap: BinaryHeap<RayTraceHitHeapEntry<*const Node<T>>>,
-	next_group: Option<Vec<T>>
+	heap: BinaryHeap<RayTraceHitHeapEntry<*const Node>>,
+	next_group: Option<Vec<usize>>
 }
 
-impl<'a, T> Iterator for OctreeIterator<'a, T> where T: Eq + Clone {
-	type Item = RayTraceOctreeItem<T>;
+impl<'a> Iterator for OctreeIterator<'a> {
+	type Item = RayTraceOctreeItem;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		loop {
@@ -127,5 +218,5 @@ impl<'a, T> Iterator for OctreeIterator<'a, T> where T: Eq + Clone {
 	}
 }
 
-unsafe impl<T> Send for RayTraceOctree<T> { }
-unsafe impl<T> Sync for RayTraceOctree<T> { }
+unsafe impl<'a> Send for RayTraceOctree { }
+unsafe impl<'a> Sync for RayTraceOctree { }

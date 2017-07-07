@@ -9,6 +9,7 @@ use anim::RayTraceAnimation;
 use hit::RayTraceRayHit;
 use material::RayTraceMaterial;
 use object::RayTraceObject;
+use object::RayTraceHitable;
 use ray::RayTraceRay;
 
 use math_util::compute_plane_hit;
@@ -166,7 +167,9 @@ impl RayTraceObject for RayTraceObjectCube {
 			panic!("Qube was not initialized!");
 		}
 	}
+}
 
+impl RayTraceHitable for RayTraceObjectCube {
 	fn next_hit(&self, ray: &RayTraceRay) -> Option<RayTraceRayHit> {
 		if let Some(ref data) = self.data {
 			let mut hit_distance = f64::MAX;

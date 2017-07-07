@@ -2,6 +2,7 @@ use std::f64;
 
 use vecmath::Vector3;
 
+use object::RayTraceHitable;
 use ray::RayTraceRay;
 
 #[allow(dead_code)]
@@ -168,6 +169,19 @@ impl AABB {
 		}
 
 		return Some(ray_min);
+	}
+
+	pub fn get_start(&self) -> &Vector3<f64> {
+		&self.start
+	}
+
+	pub fn get_end(&self) -> &Vector3<f64> {
+		&self.end
+	}
+
+	pub fn intersect_hitable(&self, object: &Box<RayTraceHitable>) -> bool {
+		// TODO
+		false
 	}
 }
 

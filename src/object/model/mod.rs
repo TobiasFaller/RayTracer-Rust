@@ -17,6 +17,7 @@ use hit::RayTraceHitHeapEntry;
 use hit::RayTraceRayHit;
 use material::RayTraceMaterial;
 use object::RayTraceObject;
+use object::RayTraceHitable;
 use octree::RayTraceOctree;
 use octree::RayTraceOctreeItem;
 use ray::RayTraceRay;
@@ -48,7 +49,7 @@ pub enum RayTraceModelNormalInterpolation {
 
 struct WorkingData {
 	aabb: Option<AABB>,
-	tree: Option<RayTraceOctree<usize>>,
+	tree: Option<RayTraceOctree>,
 	vertex_normals: Vec<Vector3<f64>>,
 	faces: Vec<Face>
 }
@@ -82,6 +83,13 @@ impl Face {
 				if t[2] == 0 { [0.0, 0.0] } else { texture_normals[t[2] - 1] }
 			)
 		]
+	}
+}
+
+impl RayTraceHitable for Face {
+	fn next_hit(&self, ray: &RayTraceRay) -> Option<RayTraceRayHit> {
+		// TODO
+		None
 	}
 }
 
@@ -162,20 +170,21 @@ impl RayTraceObjectModel {
 			let v2 = vertices[face[1][0] - 1];
 			let v3 = vertices[face[2][0] - 1];
 
-			tree.add(id, AABB::new(
-					[v1[0].min(v2[0]).min(v3[0]), v1[1].min(v2[1]).min(v3[1]), v1[2].min(v2[2]).min(v3[2])],
-					[v1[0].max(v2[0]).max(v3[0]), v1[1].max(v2[1]).max(v3[1]), v1[2].max(v2[2]).max(v3[2])]
-				));
-
 			let pos = v1;
 			let vec1 = vec3_sub(v2, v1);
 			let vec2 = vec3_sub(v3, v1);
-
-			data.faces.push(Face {
+			let face = Face {
 					id: id,
 					position: pos,
 					vec: [vec1, vec2]
-				});
+				};
+
+			println!("Adding face {}", id);
+			let face = box face;
+
+			let hitable: &Box<RayTraceHitable> = &face;
+			tree.add(hitable as *const _);
+			data.faces.push(face);
 		}
 
 		data.tree = Some(tree);
@@ -219,7 +228,9 @@ impl RayTraceObject for RayTraceObjectModel {
 			panic!("Model was not initialized!");
 		}
 	}
+}
 
+impl RayTraceHitable for RayTraceObjectModel {
 	fn next_hit(&self, ray: &RayTraceRay) -> Option<RayTraceRayHit> {
 		if let Some(ref data) = self.data {
 			// Collect all ray hits
