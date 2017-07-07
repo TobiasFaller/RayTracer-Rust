@@ -28,6 +28,16 @@ impl AABB {
 		self.end[2] = self.end[2].max(x[2]);
 	}
 
+	pub fn intersect(&self, other: &Self) -> bool {
+		for i in 0..2 {
+			if self.end[i] < other.start[i] || self.start[i] > other.end[i] {
+				return false;
+			}
+		}
+
+		true
+	}
+
 	pub fn is_hit(&self, ray: &RayTraceRay) -> bool {
 		let [x, y, z] = *ray.get_position();
 		let (x_start, x_end, y_start, y_end, z_start, z_end) = project_points_onto_ray(ray, (self.start, self.end));

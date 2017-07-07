@@ -6,31 +6,56 @@ use hit::RayTraceHitHeapEntry;
 use ray::RayTraceRay;
 
 pub struct RayTraceOctree<T> {
-	root: RayTraceOctreeNode<T>
+	root: Node<T>
 }
 
-struct RayTraceOctreeNode<T> {
+struct Node<T> {
 	aabb: AABB,
-	content: RayTraceOctreeNodeContent<T>
+	content: NodeContent<T>
 }
 
-enum RayTraceOctreeNodeContent<T> {
-	Box(Box<[RayTraceOctreeNode<T>; 8]>),
+enum NodeContent<T> {
+	Container(Box<[Node<T>; 8]>),
 	Elements(Box<Vec<T>>)
 }
 
 impl<T> RayTraceOctree<T> where T: Eq + Clone {
 	pub fn new(aabb: AABB) -> Self {
 		Self {
-			root: RayTraceOctreeNode {
+			root: Node {
 				aabb: aabb,
-				content: RayTraceOctreeNodeContent::Elements(box Vec::new())
+				content: NodeContent::Elements(box Vec::new())
 			}
 		}
 	}
 
 	pub fn add(&mut self, element: T, aabb: AABB) {
-		// Build octree
+		let mut stack = Vec::new();
+		stack.push(&mut self.root as *mut Node<T>);
+
+		loop {
+			match stack.pop() {
+				None => { return; },
+				Some(node) => {
+					unsafe {
+						if !(*node).aabb.intersect(&aabb) {
+							continue;
+						}
+
+						match (*node).content {
+							NodeContent::Container(ref mut children) => {
+								for child in children.iter_mut() {
+									stack.push(child as *mut _);
+								}
+							},
+							NodeContent::Elements(ref mut elements) => {
+								elements.push(element.clone());
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	pub fn get_hits<'a>(&self, ray: &'a RayTraceRay) -> Box<Iterator<Item = RayTraceOctreeItem<T>> + 'a> where T: 'a {
@@ -52,7 +77,7 @@ pub enum RayTraceOctreeItem<T> {
 
 struct OctreeIterator<'a, T> where T: Eq + Clone {
 	ray: &'a RayTraceRay,
-	heap: BinaryHeap<RayTraceHitHeapEntry<*const RayTraceOctreeNode<T>>>,
+	heap: BinaryHeap<RayTraceHitHeapEntry<*const Node<T>>>,
 	next_group: Option<Vec<T>>
 }
 
@@ -80,10 +105,10 @@ impl<'a, T> Iterator for OctreeIterator<'a, T> where T: Eq + Clone {
 
 			let RayTraceHitHeapEntry { value: node, distance: _ } = entry.unwrap();
 			unsafe {
-				let RayTraceOctreeNode { aabb: _, ref content } = *node;
+				let Node { aabb: _, ref content } = *node;
 
 				match content {
-					&RayTraceOctreeNodeContent::Box(ref children) => {
+					&NodeContent::Container(ref children) => {
 						for child in children.iter() {
 							match child.aabb.get_first_hit(self.ray) {
 								None => { continue; }
@@ -93,7 +118,7 @@ impl<'a, T> Iterator for OctreeIterator<'a, T> where T: Eq + Clone {
 							}
 						}
 					},
-					&RayTraceOctreeNodeContent::Elements(ref elements) => {
+					&NodeContent::Elements(ref elements) => {
 						self.next_group = Some(*elements.clone());
 					}
 				}
