@@ -1,16 +1,16 @@
 use std::collections::BinaryHeap;
+use std::mem;
 
 use aabb::AABB;
 use hit::RayTraceHitHeapEntry;
 use ray::RayTraceRay;
 
 pub struct RayTraceOctree<T> {
-	root: RayTraceOctreeNode<T>,
-	without_aabb: Vec<T>
+	root: RayTraceOctreeNode<T>
 }
 
 struct RayTraceOctreeNode<T> {
-	aabb: Option<AABB>,
+	aabb: AABB,
 	content: RayTraceOctreeNodeContent<T>
 }
 
@@ -20,54 +20,59 @@ enum RayTraceOctreeNodeContent<T> {
 }
 
 impl<T> RayTraceOctree<T> where T: Eq + Clone {
-	pub fn new() -> Self {
+	pub fn new(aabb: AABB) -> Self {
 		Self {
 			root: RayTraceOctreeNode {
-				aabb: None,
+				aabb: aabb,
 				content: RayTraceOctreeNodeContent::Elements(box Vec::new())
-			},
-			without_aabb: Vec::new()
-		}
-	}
-
-	pub fn add(&mut self, element: T, aabb: Option<&AABB>) {
-		match aabb {
-			Some(aabb) => {
-				// Build octree
-			},
-			None => {
-				self.without_aabb.push(element);
 			}
 		}
 	}
 
-	pub fn get_hits<'a>(&self, ray: &'a RayTraceRay) -> Box<Iterator<Item = (f64, T)> + 'a> where T: 'a {
+	pub fn add(&mut self, element: T, aabb: AABB) {
+		// Build octree
+	}
+
+	pub fn get_hits<'a>(&self, ray: &'a RayTraceRay) -> Box<Iterator<Item = RayTraceOctreeItem<T>> + 'a> where T: 'a {
 		let mut heap = BinaryHeap::new();
 		heap.push(RayTraceHitHeapEntry::new(0.0, &self.root as *const _));
 
 		return box OctreeIterator::<'a, T> {
 			ray: ray,
 			heap: heap,
-			without_aabb: self.without_aabb.clone()
+			next_group: None
 		};
 	}
+}
+
+pub enum RayTraceOctreeItem<T> {
+	FlushGroup,
+	Item(T)
 }
 
 struct OctreeIterator<'a, T> where T: Eq + Clone {
 	ray: &'a RayTraceRay,
 	heap: BinaryHeap<RayTraceHitHeapEntry<*const RayTraceOctreeNode<T>>>,
-	without_aabb: Vec<T>
+	next_group: Option<Vec<T>>
 }
 
 impl<'a, T> Iterator for OctreeIterator<'a, T> where T: Eq + Clone {
-	type Item = (f64, T);
+	type Item = RayTraceOctreeItem<T>;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		if let Some(val) = self.without_aabb.pop() {
-			return Some((-1.0, val));
-		}
-
 		loop {
+			if self.next_group.is_some() {
+				match self.next_group.as_mut().unwrap().pop() {
+					Some(val) => {
+						return Some(RayTraceOctreeItem::Item(val));
+					}
+					None => { }
+				}
+
+				self.next_group = None;
+				return Some(RayTraceOctreeItem::FlushGroup);
+			}
+
 			let entry = self.heap.pop();
 			if entry.is_none() {
 				return None;
@@ -80,25 +85,16 @@ impl<'a, T> Iterator for OctreeIterator<'a, T> where T: Eq + Clone {
 				match content {
 					&RayTraceOctreeNodeContent::Box(ref children) => {
 						for child in children.iter() {
-							match &child.aabb {
-								&None => {
-									self.heap.push(RayTraceHitHeapEntry::new(-1.0, child as *const _));
-								},
-								&Some(ref aabb) => {
-									match aabb.get_first_hit(self.ray) {
-										None => { continue; }
-										Some(dist) => { // Use distance as key
-											self.heap.push(RayTraceHitHeapEntry::new(dist, child as *const _));
-										}
-									}
+							match child.aabb.get_first_hit(self.ray) {
+								None => { continue; }
+								Some(dist) => { // Use distance as key
+									self.heap.push(RayTraceHitHeapEntry::new(dist, child as *const _));
 								}
 							}
 						}
 					},
 					&RayTraceOctreeNodeContent::Elements(ref elements) => {
-						for element in elements.iter() {
-							self.without_aabb.push(element.clone())
-						}
+						self.next_group = Some(*elements.clone());
 					}
 				}
 			}

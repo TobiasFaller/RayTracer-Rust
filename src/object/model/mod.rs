@@ -4,7 +4,7 @@ pub use self::obj_loader::obj_load;
 
 use std::f64;
 use std::mem;
-use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 
 use vecmath::Vector3;
 use vecmath::Vector2;
@@ -13,9 +13,12 @@ use vecmath::row_mat3_transform;
 
 use aabb::AABB;
 use anim::RayTraceAnimation;
+use hit::RayTraceHitHeapEntry;
 use hit::RayTraceRayHit;
 use material::RayTraceMaterial;
 use object::RayTraceObject;
+use octree::RayTraceOctree;
+use octree::RayTraceOctreeItem;
 use ray::RayTraceRay;
 
 use math_util::rotate_xyz;
@@ -45,6 +48,7 @@ pub enum RayTraceModelNormalInterpolation {
 
 struct WorkingData {
 	aabb: Option<AABB>,
+	tree: Option<RayTraceOctree<usize>>,
 	vertex_normals: Vec<Vector3<f64>>,
 	faces: Vec<Face>
 }
@@ -62,7 +66,7 @@ impl Face {
 
 		let n = [face[0][1], face[1][1], face[2][1]];
 		let t = [face[0][2], face[0][2], face[0][2]];
-		let face_normal = vec3_cross(self.vec[0], self.vec[1]);
+		let face_normal = vec3_normalized(vec3_cross(self.vec[0], self.vec[1]));
 
 		[
 			(
@@ -152,10 +156,16 @@ impl RayTraceObjectModel {
 			data.vertex_normals.push(vec3_normalized(row_mat3_transform(rot_matrix, *norm)));
 		}
 
+		let mut tree = RayTraceOctree::new(data.aabb.as_ref().unwrap().clone());
 		for (id, face) in self.faces.iter().enumerate() {
 			let v1 = vertices[face[0][0] - 1];
 			let v2 = vertices[face[1][0] - 1];
 			let v3 = vertices[face[2][0] - 1];
+
+			tree.add(id, AABB::new(
+					[v1[0].min(v2[0]).min(v3[0]), v1[1].min(v2[1]).min(v3[1]), v1[2].min(v2[2]).min(v3[2])],
+					[v1[0].max(v2[0]).max(v3[0]), v1[1].max(v2[1]).max(v3[1]), v1[2].max(v2[2]).max(v3[2])]
+				));
 
 			let pos = v1;
 			let vec1 = vec3_sub(v2, v1);
@@ -167,6 +177,8 @@ impl RayTraceObjectModel {
 					vec: [vec1, vec2]
 				});
 		}
+
+		data.tree = Some(tree);
 	}
 }
 
@@ -190,6 +202,7 @@ impl RayTraceObject for RayTraceObjectModel {
 		let mut data = if working_data.is_some() { working_data.unwrap() } else {
 			WorkingData {
 				aabb: None,
+				tree: None,
 				vertex_normals: Vec::new(),
 				faces: Vec::new()
 			}
@@ -209,9 +222,26 @@ impl RayTraceObject for RayTraceObjectModel {
 
 	fn next_hit(&self, ray: &RayTraceRay) -> Option<RayTraceRayHit> {
 		if let Some(ref data) = self.data {
-			let mut ray_hits: Vec<RayTraceRayHit> = Vec::new();
+			// Collect all ray hits
+			let mut ray_hits = BinaryHeap::<RayTraceHitHeapEntry<RayTraceRayHit>>::new();
 
-			for face in data.faces.iter() {
+			for hit in data.tree.as_ref().unwrap().get_hits(ray) {
+				let index;
+
+				match hit {
+					RayTraceOctreeItem::FlushGroup => {
+						if !ray_hits.is_empty() {
+							break;
+						}
+
+						continue;
+					},
+					RayTraceOctreeItem::Item(obj_index) => {
+						index = obj_index;
+					}
+				}
+
+				let face = &data.faces[index];
 				if let Some((dist, vec1, vec2)) = compute_plane_hit(ray, face.position, face.vec[0], face.vec[1]) {
 					if vec1 < 0.0 || vec1 > 1.0 || vec2 < 0.0 || vec2 > 1.0 || vec1 + vec2 > 1.0 {
 						continue; // Missed triangle
@@ -240,27 +270,17 @@ impl RayTraceObject for RayTraceObjectModel {
 
 					let material_hit = self.material.get_hit(texture_normal[0], texture_normal[1]);
 
-					ray_hits.push(
-						RayTraceRayHit::new(dist, ray.get_position_on_ray(dist), surface_normal, material_hit));
+					ray_hits.push(RayTraceHitHeapEntry::new(dist,
+							RayTraceRayHit::new(dist, ray.get_position_on_ray(dist), surface_normal, material_hit)));
 				}
 			}
 
-			if ray_hits.is_empty() {
-				return None;
-			}
-
-			ray_hits.sort_by(|a, b| {
-				match a.get_distance().partial_cmp(&b.get_distance()) {
-					Some(ordering) => {
-						ordering
-					},
-					None => {
-						Ordering::Equal
-					}
+			match ray_hits.pop() {
+				None => { return None; },
+				Some(hit) => {
+					return Some(hit.value);
 				}
-			});
-
-			return Some(ray_hits.remove(0));
+			}
 		} else {
 			panic!("Model was not initialized!");
 		}

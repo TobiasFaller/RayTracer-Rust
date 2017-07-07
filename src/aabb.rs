@@ -161,6 +161,15 @@ impl AABB {
 	}
 }
 
+impl Clone for AABB {
+	fn clone(&self) -> Self {
+		Self {
+			start: self.start,
+			end: self.end
+		}
+	}
+}
+
 fn project_points_onto_ray(ray: &RayTraceRay, points: (Vector3<f64>, Vector3<f64>)) -> (f64, f64, f64, f64, f64, f64) {
 	let mut res = [0.0_f64; 6];
 	let r_pos = ray.get_position();

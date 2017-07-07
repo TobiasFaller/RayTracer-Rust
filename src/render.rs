@@ -12,7 +12,7 @@ use color::RayTraceColor;
 use color::mix_color;
 use hit::RayTraceHitHeapEntry;
 use hit::RayTraceRayHit;
-use octree::RayTraceOctree;
+//use octree::RayTraceOctree;
 use params::RayTraceParams;
 use ray::RayTraceRay;
 use sample::RayTraceSample;
@@ -41,7 +41,7 @@ impl RayTracer {
 		let mut arc_params: Arc<&mut RayTraceParams> = Arc::new(params);
 		let mut arc_camera: Arc<&mut Box<RayTraceCamera>> = Arc::new(camera);
 		let mut arc_scene: Arc<&mut RayTraceScene> = Arc::new(scene);
-		let mut arc_tree: Arc<RayTraceOctree<usize>>;
+		//let mut arc_tree: Arc<RayTraceOctree<usize>>;
 
 		let mut thread_pool = Pool::new(8);
 
@@ -51,14 +51,15 @@ impl RayTracer {
 
 			{
 				Arc::get_mut(&mut arc_camera).unwrap().init(frame);
-				let scene = Arc::get_mut(&mut arc_scene).unwrap();
+				Arc::get_mut(&mut arc_scene).unwrap().init(frame);
+				/*let scene = Arc::get_mut(&mut arc_scene).unwrap();
 				scene.init(frame);
 
 				let mut tree = RayTraceOctree::new();
 				for (i, object) in scene.get_objects().iter().enumerate() {
 					tree.add(i, object.get_aabb());
 				}
-				arc_tree = Arc::new(tree);
+				arc_tree = Arc::new(tree);*/
 			}
 
 			info!("Initialized frame {} in {}", frame + 1, (time::now() - start));
@@ -72,10 +73,10 @@ impl RayTracer {
 						let scoped_scene: Arc<&RayTraceScene> = Arc::new(&arc_scene);
 						let scoped_params: Arc<&RayTraceParams> = Arc::new(&arc_params);
 						let scoped_acc = arc_acc.clone();
-						let scoped_tree = arc_tree.clone();
+						//let scoped_tree = arc_tree.clone();
 
 						scoped.execute(move || {
-							compute_samples(scoped_camera, scoped_scene, scoped_params, x, y, scoped_acc, scoped_tree);
+							compute_samples(scoped_camera, scoped_scene, scoped_params, x, y, scoped_acc/*, scoped_tree*/);
 						});
 					}
 				}
@@ -100,14 +101,14 @@ impl RayTracer {
 }
 
 fn compute_samples(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>, params: Arc<&RayTraceParams>,
-		x: usize, y: usize, acc: Arc<RayTraceSampleAccumulator>, tree: Arc<RayTraceOctree<usize>>) {
+		x: usize, y: usize, acc: Arc<RayTraceSampleAccumulator>/*, tree: Arc<RayTraceOctree<usize>>*/) {
 	match params.get_sampling() {
 		&None => {
 			let p_x = x as f64 + 0.5_f64;
 			let p_y = y as f64 + 0.5_f64;
 
 			let ray = camera.make_ray(p_x, p_y);
-			let color = compute_color_for_ray(&ray, *camera, *scene, *params, &*tree.as_ref(), 0);
+			let color = compute_color_for_ray(&ray, *camera, *scene, *params/*, &*tree.as_ref()*/, 0);
 
 			acc.add_sample(x, y, RayTraceSample { x: p_x, y: p_y, color: color });
 		},
@@ -117,7 +118,7 @@ fn compute_samples(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>
 			for _ in 0..ray_count {
 				let (p_x, p_y) = sampling.apply(x as f64, y as f64);
 				let ray = camera.make_ray(p_x, p_y);
-				let color = compute_color_for_ray(&ray, *camera, *scene, *params, &*tree.as_ref(), 0);
+				let color = compute_color_for_ray(&ray, *camera, *scene, *params/*, &*tree.as_ref()*/, 0);
 				acc.add_sample(x, y, RayTraceSample { x: p_x, y: p_y, color: color });
 			}
 		}
@@ -125,7 +126,7 @@ fn compute_samples(camera: Arc<&Box<RayTraceCamera>>, scene: Arc<&RayTraceScene>
 }
 
 fn compute_color_for_ray(ray: &RayTraceRay, camera: &Box<RayTraceCamera>, scene: &RayTraceScene,
-		params: &RayTraceParams, tree: &RayTraceOctree<usize>, depth: usize) -> RayTraceColor {
+		params: &RayTraceParams/*, tree: &RayTraceOctree<usize>*/, depth: usize) -> RayTraceColor {
 	// If this is an indirect ray we cancel after a maximum depth
 	if depth > params.get_max_depth() {
 		return params.get_indirect_color().clone();
@@ -134,10 +135,7 @@ fn compute_color_for_ray(ray: &RayTraceRay, camera: &Box<RayTraceCamera>, scene:
 	// Collect all ray hits
 	let mut ray_hits = BinaryHeap::<RayTraceHitHeapEntry<RayTraceRayHit>>::new();
 
-	let objects = scene.get_objects();
-	for (distance, object_index) in tree.get_hits(ray) {
-		let ref object = objects[object_index];
-
+	for object in scene.get_objects().iter() {
 		if let Some(aabb) = object.get_aabb() {
 			if !aabb.is_hit(ray) {
 				continue;
@@ -146,9 +144,6 @@ fn compute_color_for_ray(ray: &RayTraceRay, camera: &Box<RayTraceCamera>, scene:
 
 		if let Some(hit) = object.next_hit(ray) {
 			ray_hits.push(RayTraceHitHeapEntry::new(hit.get_distance(), hit));
-			if distance >= 0.0 {
-				break; // We have a hit of an ordered object
-			}
 		}
 	}
 
@@ -176,7 +171,7 @@ fn compute_color_for_ray(ray: &RayTraceRay, camera: &Box<RayTraceCamera>, scene:
 			let reflectance = hit.get_surface_material().get_reflectance();
 			if reflectance != 0.0 {
 				let reflected_ray = compute_reflected_ray(hit.get_surface_normal().clone(), ray, hit.get_distance());
-				let reflected_color = compute_color_for_ray(&reflected_ray, camera, scene, params, tree, depth + 1);
+				let reflected_color = compute_color_for_ray(&reflected_ray, camera, scene, params/*, tree*/, depth + 1);
 				material_color = mix_color(&material_color, &reflected_color, reflectance);
 			}
 
