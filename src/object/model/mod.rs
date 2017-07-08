@@ -1,4 +1,8 @@
 mod obj_loader;
+mod octree;
+
+use self::octree::RayTraceOctree;
+use self::octree::RayTraceOctreeItem;
 
 pub use self::obj_loader::obj_load;
 
@@ -8,7 +12,7 @@ use std::collections::BinaryHeap;
 
 use vecmath::Vector3;
 use vecmath::Vector2;
-use vecmath::{vec3_add, vec3_mul, vec3_sub, vec3_cross, vec3_normalized};
+use vecmath::{vec3_add, vec3_mul, vec3_sub, vec3_normalized};
 use vecmath::row_mat3_transform;
 
 use aabb::AABB;
@@ -18,8 +22,6 @@ use hit::RayTraceRayHit;
 use material::RayTraceMaterial;
 use object::RayTraceObject;
 use object::RayTraceHitable;
-use octree::RayTraceOctree;
-use octree::RayTraceOctreeItem;
 use ray::RayTraceRay;
 
 use math_util::rotate_xyz;
@@ -50,47 +52,7 @@ pub enum RayTraceModelNormalInterpolation {
 struct WorkingData {
 	aabb: Option<AABB>,
 	tree: Option<RayTraceOctree>,
-	vertex_normals: Vec<Vector3<f64>>,
-	faces: Vec<Face>
-}
-
-struct Face {
-	id: usize,
-	position: Vector3<f64>,
-	vec: [Vector3<f64>; 2]
-}
-
-impl Face {
-	fn get_normals(&self, faces: &Vec<[Vector3<usize>; 3]>, normals: &Vec<Vector3<f64>>,
-			texture_normals: &Vec<Vector2<f64>>) -> [(Vector3<f64>, Vector2<f64>); 3] {
-		let face = faces[self.id];
-
-		let n = [face[0][1], face[1][1], face[2][1]];
-		let t = [face[0][2], face[0][2], face[0][2]];
-		let face_normal = vec3_normalized(vec3_cross(self.vec[0], self.vec[1]));
-
-		[
-			(
-				if n[0] == 0 { face_normal } else { normals[n[0] - 1] },
-				if t[0] == 0 { [0.0, 0.0] } else { texture_normals[t[0] - 1] }
-			),
-			(
-				if n[1] == 0 { face_normal } else { normals[n[1] - 1] },
-				if t[1] == 0 { [0.0, 0.0] } else { texture_normals[t[1] - 1] }
-			),
-			(
-				if n[2] == 0 { face_normal } else { normals[n[2] - 1] },
-				if t[2] == 0 { [0.0, 0.0] } else { texture_normals[t[2] - 1] }
-			)
-		]
-	}
-}
-
-impl RayTraceHitable for Face {
-	fn next_hit(&self, ray: &RayTraceRay) -> Option<RayTraceRayHit> {
-		// TODO
-		None
-	}
+	vertex_normals: Vec<Vector3<f64>>
 }
 
 const AABB_MIN_DIST: Vector3<f64> = [0.001, 0.001, 0.001];
@@ -139,7 +101,6 @@ impl RayTraceObjectModel {
 	fn transform_data(&self, data: &mut WorkingData) {
 		// Reset stored data
 		data.aabb = None;
-		data.faces.clear();
 		data.vertex_normals.clear();
 
 		let rot_matrix = rotate_xyz(self.rotation);
@@ -170,21 +131,9 @@ impl RayTraceObjectModel {
 			let v2 = vertices[face[1][0] - 1];
 			let v3 = vertices[face[2][0] - 1];
 
-			let pos = v1;
-			let vec1 = vec3_sub(v2, v1);
-			let vec2 = vec3_sub(v3, v1);
-			let face = Face {
-					id: id,
-					position: pos,
-					vec: [vec1, vec2]
-				};
-
-			println!("Adding face {}", id);
-			let face = box face;
-
-			let hitable: &Box<RayTraceHitable> = &face;
-			tree.add(hitable as *const _);
-			data.faces.push(face);
+			if tree.add([v1, v2, v3]) != id {
+				panic!("Wrong index in Octree!");
+			}
 		}
 
 		data.tree = Some(tree);
@@ -212,8 +161,7 @@ impl RayTraceObject for RayTraceObjectModel {
 			WorkingData {
 				aabb: None,
 				tree: None,
-				vertex_normals: Vec::new(),
-				faces: Vec::new()
+				vertex_normals: Vec::new()
 			}
 		};
 
@@ -237,7 +185,7 @@ impl RayTraceHitable for RayTraceObjectModel {
 			let mut ray_hits = BinaryHeap::<RayTraceHitHeapEntry<RayTraceRayHit>>::new();
 
 			for hit in data.tree.as_ref().unwrap().get_hits(ray) {
-				let index;
+				let face;
 
 				match hit {
 					RayTraceOctreeItem::FlushGroup => {
@@ -247,13 +195,14 @@ impl RayTraceHitable for RayTraceObjectModel {
 
 						continue;
 					},
-					RayTraceOctreeItem::Item(obj_index) => {
-						index = obj_index;
+					RayTraceOctreeItem::Item(obj) => {
+						face = obj;
 					}
 				}
 
-				let face = &data.faces[index];
-				if let Some((dist, vec1, vec2)) = compute_plane_hit(ray, face.position, face.vec[0], face.vec[1]) {
+				let vectors = face.get_vectors();
+				if let Some((dist, vec1, vec2)) = compute_plane_hit(ray, face.get_position().clone(),
+						vectors[0], vectors[1]) {
 					if vec1 < 0.0 || vec1 > 1.0 || vec2 < 0.0 || vec2 > 1.0 || vec1 + vec2 > 1.0 {
 						continue; // Missed triangle
 					}

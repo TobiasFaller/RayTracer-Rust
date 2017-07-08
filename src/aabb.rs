@@ -178,11 +178,6 @@ impl AABB {
 	pub fn get_end(&self) -> &Vector3<f64> {
 		&self.end
 	}
-
-	pub fn intersect_hitable(&self, object: &Box<RayTraceHitable>) -> bool {
-		// TODO
-		false
-	}
 }
 
 impl Clone for AABB {

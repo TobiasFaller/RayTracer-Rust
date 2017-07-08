@@ -15,7 +15,6 @@ mod aabb;
 mod hit;
 mod ray;
 mod nonsync;
-mod octree;
 
 pub mod anim;
 pub mod camera;
