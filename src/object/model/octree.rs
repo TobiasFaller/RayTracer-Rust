@@ -8,8 +8,6 @@ use vecmath::{vec3_normalized, vec3_cross, vec3_sub};
 use aabb::AABB;
 use hit::RayTraceHitHeapEntry;
 use ray::RayTraceRay;
-use object::RayTraceHitable;
-use object::RayTraceObjectModel;
 
 pub struct RayTraceOctree {
 	root: Node,
@@ -28,8 +26,10 @@ enum NodeContent {
 
 pub struct Face {
 	id: usize,
+	normal: Vector3<f64>,
 	position: Vector3<f64>,
-	vec: [Vector3<f64>; 2]
+	vec: [Vector3<f64>; 2],
+	aabb: AABB
 }
 
 const SPLIT_THRESHOLD: usize = 20;
@@ -47,28 +47,49 @@ impl<'a> RayTraceOctree {
 
 	pub fn add(&mut self, v: [Vector3<f64>; 3]) -> usize {
 		let index = self.faces.len();
+
 		let pos = v[0];
 		let vec1 = vec3_sub(v[1], v[0]);
 		let vec2 = vec3_sub(v[2], v[0]);
+		let normal = vec3_normalized(vec3_cross(vec1, vec2));
+		let aabb = AABB::new(
+				[
+					v[0][0].min(v[1][0]).min(v[2][0]),
+					v[0][1].min(v[1][1]).min(v[2][1]),
+					v[0][2].min(v[1][2]).min(v[2][2])
+				],
+				[
+					v[0][0].max(v[1][0]).max(v[2][0]),
+					v[0][1].max(v[1][1]).max(v[2][1]),
+					v[0][2].max(v[1][2]).max(v[2][2])
+				]
+			);
+
 		let face = Face {
 				id: index,
+				normal: normal,
 				position: pos,
-				vec: [vec1, vec2]
+				vec: [vec1, vec2],
+				aabb: aabb
 			};
-		self.faces.push(face);
 
 		let mut stack = Vec::new();
 		stack.push(&mut self.root as *mut Node);
 
+		let mut added = false;
+
 		loop {
 			match stack.pop() {
-				None => { return index; },
+				None => { break; },
 				Some(node) => {
 					unsafe {
-						// TODO
-						/*if !(*node).aabb.intersect_hitable(& *object) {
+						if !(*node).aabb.is_intersecting(&face.aabb) {
 							continue;
-						}*/
+						}
+
+						if !(*node).aabb.is_intersecting_triangle(face.position, face.vec, face.normal) {
+							continue;
+						}
 
 						let content;
 						match (*node).content {
@@ -79,6 +100,7 @@ impl<'a> RayTraceOctree {
 								continue;
 							},
 							NodeContent::Elements(ref mut elements) => {
+								added = true;
 								elements.push(index);
 
 								if elements.len() < SPLIT_THRESHOLD {
@@ -89,15 +111,22 @@ impl<'a> RayTraceOctree {
 							}
 						}
 
-						let mut content = self.split_container(content, &(*node).aabb);
+						let mut content = self.split_container(content, &(*node).aabb, &face);
 						mem::swap(&mut (*node).content, &mut content);
 					}
 				}
 			}
 		}
+
+		if !added {
+			panic!("Element was not added to octree!");
+		}
+
+		self.faces.push(face);
+		return index;
 	}
 
-	pub fn get_hits<'c: 'a>(&'a self, ray: &'c RayTraceRay) -> Box<Iterator<Item = RayTraceOctreeItem> + 'a> {
+	pub fn get_hits<'c: 'a>(&'a self, ray: &'c RayTraceRay) -> Box<Iterator<Item = &'a Face> + 'a> {
 		let mut heap = BinaryHeap::new();
 		heap.push(RayTraceHitHeapEntry::new(0.0, &self.root as *const _));
 
@@ -109,9 +138,7 @@ impl<'a> RayTraceOctree {
 		}
 	}
 
-	fn split_container(&self, elements: &Box<Vec<usize>>, aabb: &AABB) -> NodeContent {
-		println!("Splitting");
-
+	fn split_container(&self, elements: &Box<Vec<usize>>, aabb: &AABB, current_face: &Face) -> NodeContent {
 		let start = aabb.get_start();
 		let end = aabb.get_end();
 		let mid = [(start[0] + end[0]) / 2.0, (start[1] + end[1]) / 2.0, (start[2] + end[2]) / 2.0];
@@ -152,37 +179,30 @@ impl<'a> RayTraceOctree {
 		];
 
 		for node in nodes.iter_mut() {
-			println!("Node with aabb: {:.5}, {:.5}, {:.5} {:.5}, {:.5}, {:.5}",
-				node.aabb.get_start()[0],
-				node.aabb.get_start()[1],
-				node.aabb.get_start()[2],
-				node.aabb.get_end()[0],
-				node.aabb.get_end()[1],
-				node.aabb.get_end()[2]);
-
 			for element in elements.iter() {
-				unsafe {
-					/*if node.aabb.intersect_hitable(& *self.faces[*element]) {
-						match node.content {
-							NodeContent::Elements(ref mut elements) => {
-								elements.push(element.clone());
-							},
-							_ => {
-								panic!("What happened?");
-							}
-						}
-					}*/
+				let face = if *element >= self.faces.len() { current_face } else { &self.faces[*element] };
+
+				if !node.aabb.is_intersecting(&face.aabb) {
+					continue;
+				}
+
+				if !node.aabb.is_intersecting_triangle(face.position, face.vec, face.normal) {
+					continue;
+				}
+
+				match node.content {
+					NodeContent::Elements(ref mut elements) => {
+						elements.push(*element);
+					},
+					_ => {
+						panic!("What happened?");
+					}
 				}
 			}
 		}
 
 		NodeContent::Container(box nodes)
 	}
-}
-
-pub enum RayTraceOctreeItem<'a> {
-	FlushGroup,
-	Item(&'a Face)
 }
 
 struct OctreeIterator<'a> {
@@ -193,20 +213,19 @@ struct OctreeIterator<'a> {
 }
 
 impl<'a> Iterator for OctreeIterator<'a> {
-	type Item = RayTraceOctreeItem<'a>;
+	type Item = &'a Face;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		loop {
 			if self.next_group.is_some() {
 				match self.next_group.as_mut().unwrap().pop() {
 					Some(index) => {
-						return Some(RayTraceOctreeItem::Item(&self.tree.faces[index]));
+						return Some(&self.tree.faces[index]);
 					}
 					None => { }
 				}
 
 				self.next_group = None;
-				return Some(RayTraceOctreeItem::FlushGroup);
 			}
 
 			let entry = self.heap.pop();
@@ -230,7 +249,9 @@ impl<'a> Iterator for OctreeIterator<'a> {
 						}
 					},
 					&NodeContent::Elements(ref elements) => {
-						self.next_group = Some(*elements.clone());
+						if elements.len() > 0 {
+							self.next_group = Some(*elements.clone());
+						}
 					}
 				}
 			}

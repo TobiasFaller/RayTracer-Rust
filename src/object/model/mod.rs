@@ -2,7 +2,6 @@ mod obj_loader;
 mod octree;
 
 use self::octree::RayTraceOctree;
-use self::octree::RayTraceOctreeItem;
 
 pub use self::obj_loader::obj_load;
 
@@ -184,25 +183,9 @@ impl RayTraceHitable for RayTraceObjectModel {
 			// Collect all ray hits
 			let mut ray_hits = BinaryHeap::<RayTraceHitHeapEntry<RayTraceRayHit>>::new();
 
-			for hit in data.tree.as_ref().unwrap().get_hits(ray) {
-				let face;
-
-				match hit {
-					RayTraceOctreeItem::FlushGroup => {
-						if !ray_hits.is_empty() {
-							break;
-						}
-
-						continue;
-					},
-					RayTraceOctreeItem::Item(obj) => {
-						face = obj;
-					}
-				}
-
+			for face in data.tree.as_ref().unwrap().get_hits(ray) {
 				let vectors = face.get_vectors();
-				if let Some((dist, vec1, vec2)) = compute_plane_hit(ray, face.get_position().clone(),
-						vectors[0], vectors[1]) {
+				if let Some((dist, vec1, vec2)) = compute_plane_hit(ray, *face.get_position(), vectors[0], vectors[1]) {
 					if vec1 < 0.0 || vec1 > 1.0 || vec2 < 0.0 || vec2 > 1.0 || vec1 + vec2 > 1.0 {
 						continue; // Missed triangle
 					}

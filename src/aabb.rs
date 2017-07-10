@@ -1,8 +1,8 @@
 use std::f64;
 
 use vecmath::Vector3;
+use vecmath::{vec3_add, vec3_cross, vec3_sub, vec3_dot, vec3_scale, vec3_neg};
 
-use object::RayTraceHitable;
 use ray::RayTraceRay;
 
 #[allow(dead_code)]
@@ -29,7 +29,7 @@ impl AABB {
 		self.end[2] = self.end[2].max(x[2]);
 	}
 
-	pub fn intersect(&self, other: &Self) -> bool {
+	pub fn is_intersecting(&self, other: &Self) -> bool {
 		for i in 0..2 {
 			if self.end[i] < other.start[i] || self.start[i] > other.end[i] {
 				return false;
@@ -178,6 +178,61 @@ impl AABB {
 	pub fn get_end(&self) -> &Vector3<f64> {
 		&self.end
 	}
+
+	pub fn is_intersecting_plane(&self, position: Vector3<f64>, norm: Vector3<f64>) -> bool {
+		let size = vec3_sub(self.end, self.start);
+		let center = vec3_add(self.start, vec3_scale(size, 0.5));
+
+		let p_len = vec3_dot([norm[0].abs(), norm[1].abs(), norm[2].abs()], size);
+		let aabb_pos = vec3_sub(center, position);
+		let dist = vec3_dot(norm, aabb_pos);
+
+		return dist.abs() <= p_len;
+	}
+
+	pub fn is_intersecting_triangle(&self, position: Vector3<f64>, vec: [Vector3<f64>; 2], norm: Vector3<f64>) -> bool {
+		// Compute points
+		let p1 = position;
+		let p2 = vec3_add(position, vec[0]);
+		let p3 = vec3_add(position, vec[1]);
+
+		// Compute edges
+		let e1 = vec[0];
+		let e2 = vec3_sub(vec[0], vec[1]);
+		let e3 = vec3_neg(vec[1]);
+
+		// AABB unit vectors
+		let u1 = [1.0, 0.0, 0.0];
+		let u2 = [0.0, 1.0, 0.0];
+		let u3 = [0.0, 0.0, 1.0];
+
+		let axis = [
+			u1,
+			u2,
+			u3,
+			norm,
+			vec3_cross(u1, e1),
+			vec3_cross(u2, e1),
+			vec3_cross(u3, e1),
+			vec3_cross(u1, e2),
+			vec3_cross(u2, e2),
+			vec3_cross(u3, e2),
+			vec3_cross(u1, e3),
+			vec3_cross(u2, e3),
+			vec3_cross(u3, e3)
+		];
+
+		for a in axis.into_iter() {
+			let (aabb_min, aabb_max) = get_aabb_interval_on_axis(*a, self.start, self.end);
+			let (t_min, t_max) = get_point_interval_on_axis(*a, &[p1, p2, p3]);
+
+			if t_min > aabb_max || aabb_min > t_max {
+				return false;
+			}
+		}
+
+		true
+	}
 }
 
 impl Clone for AABB {
@@ -215,4 +270,39 @@ fn project_points_onto_ray(ray: &RayTraceRay, points: (Vector3<f64>, Vector3<f64
 	}
 
 	return (res[0], res[1], res[2], res[3], res[4], res[5]);
+}
+
+fn get_aabb_interval_on_axis(axis: Vector3<f64>, start: Vector3<f64>, end: Vector3<f64>) -> (f64, f64) {
+	let points = [
+		[start[0], start[1], start[2]],
+		[start[0], start[1], end[2]],
+		[start[0], end[1], start[2]],
+		[start[0], end[1], end[2]],
+		[end[0], start[1], start[2]],
+		[end[0], start[1], end[2]],
+		[end[0], end[1], start[2]],
+		[end[0], end[1], end[2]]
+	];
+
+	get_point_interval_on_axis(axis, &points)
+}
+
+fn get_point_interval_on_axis(axis: Vector3<f64>, points: &[Vector3<f64>]) -> (f64, f64) {
+	let mut o = (f64::NAN, f64::NAN);
+
+	for p in points {
+		let v = vec3_dot(axis, *p);
+		o.0 = if o.0.is_nan() || o.0 > v { v } else { o.0 };
+		o.1 = if o.1.is_nan() || o.1 < v { v } else { o.1 };
+	}
+
+	o
+
+	/*points.iter()
+		.map(|v| vec3_dot(axis, *v))
+		.fold((f64::NAN, f64::NAN), |o, v| {
+		(
+			if o.0.is_nan() || o.0 > v { v } else { o.0 },
+			if o.1.is_nan() || o.1 < v { v } else { o.1 }
+		)})*/
 }
