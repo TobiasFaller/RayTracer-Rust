@@ -7,8 +7,16 @@ use ray::RayTraceRay;
 
 pub const PI: f64 = 3.14159265359;
 pub const TWO_PI: f64 = 2.0 * PI;
+pub const HALF_PI: f64 = 0.5 * PI;
+
 pub const DEG_TO_RAD: f64 = TWO_PI / 360.0;
+pub const DEG_TO_NORM: f64 = 1.0 / 360.0;
+
 pub const RAD_TO_DEG: f64 = 360.0 / TWO_PI;
+pub const RAD_TO_NORM: f64 = 1.0 / TWO_PI;
+
+pub const NORM_TO_DEG: f64 = 360.0;
+pub const NORM_TO_RAD: f64 = TWO_PI;
 
 #[allow(dead_code)]
 pub fn rotate_z(angle: f64) -> Matrix3<f64> {

@@ -11,6 +11,7 @@ use ray::RayTraceRay;
 
 pub struct RayTraceOctree {
 	root: Node,
+	quads: usize,
 	faces: Vec<Face>
 }
 
@@ -28,11 +29,11 @@ pub struct Face {
 	id: usize,
 	normal: Vector3<f64>,
 	position: Vector3<f64>,
-	vec: [Vector3<f64>; 2],
-	aabb: AABB
+	vec: [Vector3<f64>; 2]
 }
 
-const SPLIT_THRESHOLD: usize = 20;
+const SPLIT_THRESHOLD: usize = 30;
+const ELEMENTS_PER_QUAD_THRESHOLD: usize = 10;
 
 impl<'a> RayTraceOctree {
 	pub fn new(aabb: AABB) -> Self {
@@ -41,6 +42,7 @@ impl<'a> RayTraceOctree {
 				aabb: aabb,
 				content: NodeContent::Elements(box Vec::new())
 			},
+			quads: 0,
 			faces: Vec::new()
 		}
 	}
@@ -52,25 +54,11 @@ impl<'a> RayTraceOctree {
 		let vec1 = vec3_sub(v[1], v[0]);
 		let vec2 = vec3_sub(v[2], v[0]);
 		let normal = vec3_normalized(vec3_cross(vec1, vec2));
-		let aabb = AABB::new(
-				[
-					v[0][0].min(v[1][0]).min(v[2][0]),
-					v[0][1].min(v[1][1]).min(v[2][1]),
-					v[0][2].min(v[1][2]).min(v[2][2])
-				],
-				[
-					v[0][0].max(v[1][0]).max(v[2][0]),
-					v[0][1].max(v[1][1]).max(v[2][1]),
-					v[0][2].max(v[1][2]).max(v[2][2])
-				]
-			);
-
 		let face = Face {
 				id: index,
 				normal: normal,
 				position: pos,
-				vec: [vec1, vec2],
-				aabb: aabb
+				vec: [vec1, vec2]
 			};
 
 		let mut stack = Vec::new();
@@ -83,9 +71,9 @@ impl<'a> RayTraceOctree {
 				None => { break; },
 				Some(node) => {
 					unsafe {
-						if !(*node).aabb.is_intersecting(&face.aabb) {
+						/*if !(*node).aabb.is_intersecting(&face.aabb) {
 							continue;
-						}
+						}*/
 
 						if !(*node).aabb.is_intersecting_triangle(face.position, face.vec, face.normal) {
 							continue;
@@ -104,6 +92,10 @@ impl<'a> RayTraceOctree {
 								elements.push(index);
 
 								if elements.len() < SPLIT_THRESHOLD {
+									continue;
+								}
+
+								if self.quads>= self.faces.len() / ELEMENTS_PER_QUAD_THRESHOLD {
 									continue;
 								}
 
@@ -126,7 +118,7 @@ impl<'a> RayTraceOctree {
 		return index;
 	}
 
-	pub fn get_hits<'c: 'a>(&'a self, ray: &'c RayTraceRay) -> Box<Iterator<Item = &'a Face> + 'a> {
+	pub fn get_hits<'c: 'a>(&'a self, ray: &'c RayTraceRay) -> Box<Iterator<Item = RayTraceOctreeItem<'a>> + 'a> {
 		let mut heap = BinaryHeap::new();
 		heap.push(RayTraceHitHeapEntry::new(0.0, &self.root as *const _));
 
@@ -138,7 +130,9 @@ impl<'a> RayTraceOctree {
 		}
 	}
 
-	fn split_container(&self, elements: &Box<Vec<usize>>, aabb: &AABB, current_face: &Face) -> NodeContent {
+	fn split_container(&mut self, elements: &Box<Vec<usize>>, aabb: &AABB, current_face: &Face) -> NodeContent {
+		self.quads += 8;
+
 		let start = aabb.get_start();
 		let end = aabb.get_end();
 		let mid = [(start[0] + end[0]) / 2.0, (start[1] + end[1]) / 2.0, (start[2] + end[2]) / 2.0];
@@ -182,9 +176,9 @@ impl<'a> RayTraceOctree {
 			for element in elements.iter() {
 				let face = if *element >= self.faces.len() { current_face } else { &self.faces[*element] };
 
-				if !node.aabb.is_intersecting(&face.aabb) {
+				/*if !node.aabb.is_intersecting(&face.aabb) {
 					continue;
-				}
+				}*/
 
 				if !node.aabb.is_intersecting_triangle(face.position, face.vec, face.normal) {
 					continue;
@@ -212,20 +206,27 @@ struct OctreeIterator<'a> {
 	next_group: Option<Vec<usize>>
 }
 
+#[allow(dead_code)]
+pub enum RayTraceOctreeItem<'a> {
+	FlushGroup,
+	Item(&'a Face)
+}
+
 impl<'a> Iterator for OctreeIterator<'a> {
-	type Item = &'a Face;
+	type Item = RayTraceOctreeItem<'a>;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		loop {
 			if self.next_group.is_some() {
 				match self.next_group.as_mut().unwrap().pop() {
 					Some(index) => {
-						return Some(&self.tree.faces[index]);
+						return Some(RayTraceOctreeItem::Item(&self.tree.faces[index]));
 					}
 					None => { }
 				}
 
 				self.next_group = None;
+				//return Some(RayTraceOctreeItem::FlushGroup);
 			}
 
 			let entry = self.heap.pop();

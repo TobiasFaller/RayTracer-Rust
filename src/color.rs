@@ -109,6 +109,15 @@ impl RayTraceColor {
 		}
 	}
 
+	pub fn gray() -> Self {
+		RayTraceColor {
+			r: 0.5,
+			g: 0.5,
+			b: 0.5,
+			a: 1.0
+		}
+	}
+
 	pub fn chroma(angle_deg: f32) -> Self {
 		let angle = angle_deg.min(360.0).max(0.0);
 
@@ -136,6 +145,10 @@ impl RayTraceColor {
 			b: b,
 			a: 1.0
 		}
+	}
+
+	pub fn chroma_no_clip(angle_deg: f32) -> Self {
+		Self::chroma(angle_deg % 360.0)
 	}
 
 	pub fn set(&mut self, r: f32, g: f32, b: f32, a: f32) {
@@ -202,10 +215,10 @@ impl RayTraceColor {
 			self.clone()
 		} else {
 			Self {
-				r: self.r * factor + (1.0_f32 - factor) * color.r,
-				g: self.g * factor + (1.0_f32 - factor) * color.g,
-				b: self.b * factor + (1.0_f32 - factor) * color.b,
-				a: self.a * factor + (1.0_f32 - factor) * color.a
+				r: (1.0_f32 - factor) * self.r + factor * color.r,
+				g: (1.0_f32 - factor) * self.g + factor * color.g,
+				b: (1.0_f32 - factor) * self.b + factor * color.b,
+				a: (1.0_f32 - factor) * self.a + factor * color.a
 			}
 		}
 	}

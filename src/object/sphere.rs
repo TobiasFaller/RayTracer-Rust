@@ -14,6 +14,7 @@ use object::RayTraceHitable;
 use ray::RayTraceRay;
 
 use math_util::PI;
+use math_util::HALF_PI;
 use math_util::rotate_xyz;
 
 #[allow(dead_code)]
@@ -137,9 +138,14 @@ impl RayTraceHitable for RayTraceObjectSphere {
 
 			let hit_point = ray.get_position_on_ray(t);
 			let surface_normal = vec3_normalized_sub(hit_point, self.center);
-
 			let tex_normal = row_mat3_transform(data.rot_matrix, surface_normal);
-			let angle_t = if tex_normal[0] != 0.0 {(tex_normal[2] / tex_normal[0]).atan()} else { -PI };
+
+			let mut angle_t = if tex_normal[0] != 0.0 {(tex_normal[2] / tex_normal[0]).atan()} else { -HALF_PI };
+			angle_t -= HALF_PI;
+			if tex_normal[0] > 0.0 {
+				angle_t += PI;
+			}
+
 			let angle_p = tex_normal[1].acos();
 
 			return Some(RayTraceRayHit::new(t, hit_point, surface_normal, self.material.get_hit(angle_t, angle_p)));

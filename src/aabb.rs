@@ -109,10 +109,10 @@ impl AABB {
 
 			check_xy = false;
 			check_xz = false;
-		} else if x_start < 0.0 && x_end < 0.0 {
+		} else if x_start <= 0.0 && x_end <= 0.0 {
 			return None;
 		} else {
-			if x_start >= 0.0 {
+			if x_start > 0.0 {
 				ray_min = x_start;
 			} else {
 				ray_min = x_end;
@@ -126,10 +126,10 @@ impl AABB {
 
 			check_xy = false;
 			check_yz = false;
-		} else if y_start < 0.0 && y_end < 0.0 {
+		} else if y_start <= 0.0 && y_end <= 0.0 {
 			return None;
 		} else {
-			if y_start >= 0.0 {
+			if y_start > 0.0 {
 				ray_min = y_start.min(ray_min);
 			} else {
 				ray_min = y_end.min(ray_min);
@@ -143,10 +143,10 @@ impl AABB {
 
 			check_xz = false;
 			check_yz = false;
-		} else if z_start < 0.0 && z_end < 0.0 {
+		} else if z_start <= 0.0 && z_end <= 0.0 {
 			return None;
 		} else {
-			if z_start >= 0.0 {
+			if z_start > 0.0 {
 				ray_min = z_start.min(ray_min);
 			} else {
 				ray_min = z_end.min(ray_min);
@@ -292,8 +292,8 @@ fn get_point_interval_on_axis(axis: Vector3<f64>, points: &[Vector3<f64>]) -> (f
 
 	for p in points {
 		let v = vec3_dot(axis, *p);
-		o.0 = if o.0.is_nan() || o.0 > v { v } else { o.0 };
-		o.1 = if o.1.is_nan() || o.1 < v { v } else { o.1 };
+		o.0 = if o.0.is_nan() || o.0 >= v { v } else { o.0 };
+		o.1 = if o.1.is_nan() || o.1 <= v { v } else { o.1 };
 	}
 
 	o

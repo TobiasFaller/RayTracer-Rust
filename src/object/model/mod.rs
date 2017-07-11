@@ -2,6 +2,7 @@ mod obj_loader;
 mod octree;
 
 use self::octree::RayTraceOctree;
+use self::octree::RayTraceOctreeItem;
 
 pub use self::obj_loader::obj_load;
 
@@ -97,6 +98,14 @@ impl RayTraceObjectModel {
 		self.anim_scale = Some(anim);
 	}
 
+	pub fn set_interpolation(&mut self, interpolation: RayTraceModelNormalInterpolation) {
+		self.interpolation = interpolation;
+	}
+
+	pub fn get_interpolation(&self) -> &RayTraceModelNormalInterpolation {
+		&self.interpolation
+	}
+
 	fn transform_data(&self, data: &mut WorkingData) {
 		// Reset stored data
 		data.aabb = None;
@@ -112,7 +121,8 @@ impl RayTraceObjectModel {
 
 			match data.aabb {
 				Some(ref mut aabb) => {
-					aabb.expand(vec);
+					aabb.expand(vec3_sub(vec, AABB_MIN_DIST));
+					aabb.expand(vec3_add(vec, AABB_MIN_DIST));
 				},
 				None => {
 					data.aabb = Some(AABB::new(vec3_sub(vec, AABB_MIN_DIST), vec3_add(vec, AABB_MIN_DIST)));
@@ -183,7 +193,22 @@ impl RayTraceHitable for RayTraceObjectModel {
 			// Collect all ray hits
 			let mut ray_hits = BinaryHeap::<RayTraceHitHeapEntry<RayTraceRayHit>>::new();
 
-			for face in data.tree.as_ref().unwrap().get_hits(ray) {
+			for hit in data.tree.as_ref().unwrap().get_hits(ray) {
+				let face;
+
+				match hit {
+					RayTraceOctreeItem::FlushGroup => {
+						if !ray_hits.is_empty() {
+							break;
+						}
+
+						continue;
+					},
+					RayTraceOctreeItem::Item(obj) => {
+						face = obj;
+					}
+				}
+
 				let vectors = face.get_vectors();
 				if let Some((dist, vec1, vec2)) = compute_plane_hit(ray, *face.get_position(), vectors[0], vectors[1]) {
 					if vec1 < 0.0 || vec1 > 1.0 || vec2 < 0.0 || vec2 > 1.0 || vec1 + vec2 > 1.0 {
@@ -206,9 +231,28 @@ impl RayTraceHitable for RayTraceObjectModel {
 								(normals[0].1[1] + normals[1].1[1] + normals[2].1[1]) / 3.0
 							];
 						},
+						RayTraceModelNormalInterpolation::Linear => {
+							let mut f = [1.0 - vec1 - vec2, vec1, vec2];
+							let sum = f[0] + f[1] + f[2];
+							if sum != 0.0 {
+								f[0] /= sum;
+								f[1] /= sum;
+								f[2] /= sum;
+							}
+
+							surface_normal = [
+								(normals[0].0[0] * f[0] + normals[1].0[0] * f[1] + normals[2].0[0] * f[2]),
+								(normals[0].0[1] * f[0] + normals[1].0[1] * f[1] + normals[2].0[1] * f[2]),
+								(normals[0].0[2] * f[0] + normals[1].0[2] * f[1] + normals[2].0[2] * f[2])
+							];
+							texture_normal = [
+								(normals[0].1[0] * f[0] + normals[1].1[0] * f[1] + normals[2].1[0] * f[2]),
+								(normals[0].1[1] * f[0] + normals[1].1[1] * f[1] + normals[2].1[1] * f[2])
+							];
+						}/*,
 						_ => {
 							panic!("Unsupported shading model");
-						}
+						}*/
 					}
 
 					let material_hit = self.material.get_hit(texture_normal[0], texture_normal[1]);
